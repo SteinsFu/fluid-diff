@@ -3,6 +3,7 @@
   "displayName": "easy-diff-viewer",
   "description": "Fluid gap-free side-by-side diff viewer (Beyond Compare and Meld Style).",
   "version": "0.0.1",
+  "publisher": "easy-diff-viewer",
   "engines": {
     "vscode": "^1.128.0"
   },
