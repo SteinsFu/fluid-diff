@@ -60,12 +60,15 @@ export function activate(context: vscode.ExtensionContext) {
             }
         );
 
-        // Mock test data
-        // const previousText = fs.readFileSync(path.join(context.extensionPath, 'examples', 'example1_old.py'), 'utf8');
-        // const currentText = fs.readFileSync(path.join(context.extensionPath, 'examples', 'example1_new.py'), 'utf8');
-
         // 4. Set the HTML content of the webview panel
-        panel.webview.html = getWebviewContent(context, previousText, currentText);
+        panel.webview.html = await getWebviewContent(context, previousText, currentText, activeEditor.document.languageId);
+
+        // Mock test data
+        // panel.webview.html = await getWebviewContent(context,
+        //     fs.readFileSync(path.join(context.extensionPath, 'examples', 'example1_old.py'), 'utf8'),
+        //     fs.readFileSync(path.join(context.extensionPath, 'examples', 'example1_new.py'), 'utf8'),
+        //     'python'
+        // );
     });
 
     context.subscriptions.push(disposable);
@@ -76,10 +79,16 @@ export function deactivate() {}
 
 
 // helper function to generate the HTML content for the webview
-function getWebviewContent(context: vscode.ExtensionContext, oldText: string, newText: string): string {
+async function getWebviewContent(context: vscode.ExtensionContext, oldText: string, newText: string, lang: string): Promise<string> {
     const oldLines = oldText.split(/\r?\n/);
     const newLines = newText.split(/\r?\n/);
     const chunks = diffLines(oldLines, newLines);
+
+    // syntax-color the lines
+    const [oldColoredToks, newColoredToks] = await Promise.all([
+        syntaxColoredLines(oldLines.join('\n'), lang),
+        syntaxColoredLines(newLines.join('\n'), lang),
+    ])
 
     // Word highlights only for similar line pairs; unpaired lines keep only the chunk background.
     const words = { a: new Map<number, WordMark[]>(), b: new Map<number, WordMark[]>() };
@@ -95,13 +104,13 @@ function getWebviewContent(context: vscode.ExtensionContext, oldText: string, ne
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
     // Function replacers: file text may contain `$&`-style patterns that string replacers expand.
     const htmlContent = fs.readFileSync(htmlPath, 'utf8')
-        .replace('{{oldText}}', () => renderLines(oldLines, chunks, 'a', words.a))
-        .replace('{{newText}}', () => renderLines(newLines, chunks, 'b', words.b))
+        .replace('{{oldText}}', () => renderLines(oldLines, chunks, 'a', words.a, oldColoredToks))
+        .replace('{{newText}}', () => renderLines(newLines, chunks, 'b', words.b, newColoredToks))
         .replace('{{chunks}}', () => JSON.stringify(chunks));
     return htmlContent;
 }
 
-function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: Map<number, WordMark[]>): string {
+function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: Map<number, WordMark[]>, coloredToks: ColoredTok[][]): string {
     const cls: string[] = lines.map(() => 'line');
     for (const c of chunks) {
         const [s, e] = side === 'a' ? [c.a0, c.a1] : [c.b0, c.b1];
@@ -111,15 +120,59 @@ function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: M
         }
     }
     const escape = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const renderText = (l: string, marks: WordMark[] = []) => {
+    const renderText = (l: string, marks: WordMark[] = [], coloredToks: ColoredTok[] = []) => {
+        // k is the index of the next coloredTok to paint
+        let k = 0;  
+        // function to color HTML for characters [s, e)
+        const paint = (s: number, e: number) => {
+            // [s, e) is the diff-marked text region; coloredToks.start and .end are syntax color regions
+            if (!coloredToks.length) 
+                return escape(l.slice(s, e));
+            while (k < coloredToks.length && coloredToks[k].end <= s) 
+                k++;
+            let out = '';
+            for (let i = k; i < coloredToks.length && coloredToks[i].start < e; i++) {
+                const t = coloredToks[i];
+                const text = escape(l.slice(Math.max(s, t.start), Math.min(e, t.end)));
+                // color will be undefined for default color (foreground)
+                out += t.color ? `<span style="color:${t.color}">${text}</span>` : text;
+            }
+            return out;
+        }
+        // paint diff-marked text with syntax-colored tokens
         let out = '', pos = 0;
         for (const [s, e, cls] of marks) {
-            out += escape(l.slice(pos, s)) + `<span class="${cls}">${escape(l.slice(s, e))}</span>`;
+            out += paint(pos, s) + `<span class="${cls}">${paint(s, e)}</span>`;
             pos = e;
         }
-        return out + escape(l.slice(pos));
+        return out + paint(pos, l.length);
     };
     return lines.map((l, i) =>
-        `<div class="${cls[i]}"><span class="line-num">${i + 1}</span>${renderText(l, words.get(i)) || ' '}</div>`
+        `<div class="${cls[i]}"><span class="line-num">${i + 1}</span>${renderText(l, words.get(i), coloredToks[i] || []) || ' '}</div>`
     ).join('');
+}
+
+type ColoredTok = { start: number; end: number; color?: string }
+
+async function syntaxColoredLines(text: string, lang: string): Promise<ColoredTok[][]> {
+    const shiki = await import('shiki');
+    const safeLang = lang in shiki.bundledLanguages ? lang as keyof typeof shiki.bundledLanguages : 'text';
+    const { tokens, fg } = await shiki.codeToTokens(text, { lang: safeLang, theme: 'dark-plus' });
+    return tokens.map(line => {
+        const out: ColoredTok[] = [];
+        let pos = 0;
+        for (const t of line) {
+            const color = t.color === fg ? undefined : t.color;
+            const end = pos + t.content.length;
+            const last = out[out.length - 1];
+            // merge same-color tokens
+            if (last && last.color === color) {
+                last.end = end;
+            } else {
+                out.push({ start: pos, end, color });
+            }
+            pos = end;
+        }
+        return out;
+    });
 }
