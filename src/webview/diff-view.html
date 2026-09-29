@@ -15,20 +15,47 @@
     }
 
     .pane {
-      flex: 1;
-      overflow-y: auto;
+      flex: 0 0 calc(50% - 30px); /* half width minus half gutter */
+      width: calc(50% - 30px);
+      min-width: 0;
+      overflow: auto;
       padding: 10px;
       white-space: pre;
       position: relative;
+      box-sizing: border-box;
     }
 
+    /* LINE_HEIGHT and PANE_PAD in the script must match these */
     .line {
       height: 20px;
       line-height: 20px;
     }
 
+    /* As wide as the longest line, so every row's background spans the full scroll width */
+    .lines {
+      width: max-content;
+      min-width: 100%;
+    }
+
+    .line-num {
+      display: inline-block;
+      width: 5ch;
+      margin-right: 1ch;
+      text-align: right;
+      color: #858585;
+      user-select: none;
+    }
+
+    .chunk-insert { background: rgba(140, 200, 140, 0.2); }
+    .chunk-delete { background: rgba(240, 140, 140, 0.2); }
+    .chunk-replace { background: rgba(140, 180, 240, 0.2); }
+    .word-change { background: rgba(110, 160, 250, 0.5); border-radius: 2px; }
+    .gap-before { box-shadow: inset 0 1px 0 rgba(200, 200, 200, 0.8); }
+    .gap-after { box-shadow: inset 0 -1px 0 rgba(200, 200, 200, 0.8); }
+
     /* The fluid gutter holding our connecting curves */
     .gutter {
+      flex: 0 0 60px;
       width: 60px;
       background: #252526;
       position: relative;
@@ -46,44 +73,57 @@
 </head>
 
 <body>
-  <div class="pane" id="leftPane">{{oldText}}</div>
+  <div class="pane" id="leftPane"><div class="lines">{{oldText}}</div></div>
   <div class="gutter">
     <canvas id="canvas"></canvas>
   </div>
-  <div class="pane" id="rightPane">{{newText}}</div>
+  <div class="pane" id="rightPane"><div class="lines">{{newText}}</div></div>
 
   <script>
     const leftPane = document.getElementById('leftPane');
     const rightPane = document.getElementById('rightPane');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    const chunks = {{chunks}};
+    const LINE_HEIGHT = 20;
+    const PANE_PAD = 10;
+    const COLORS = {
+      insert: [140, 200, 140],
+      delete: [240, 140, 140],
+      replace: [140, 180, 240],
+    };
 
-    // Resize canvas to match the window container
     function resizeCanvas() {
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = canvas.parentElement.clientHeight;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvas.parentElement.clientWidth * dpr;
+      canvas.height = canvas.parentElement.clientHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       drawConnections();
     }
 
-    // Simple MVP fluid connection drawer
+    // Line boundary k (top of line k) in viewport pixels; lines have fixed height, so no DOM lookups.
+    const yOf = (pane, k) => PANE_PAD + k * LINE_HEIGHT - pane.scrollTop;
+
+    // Each chunk is a filled band whose edges are Bezier curves joining the left and right line ranges.
     function drawConnections() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // For our basic MVP, let's visually link line 1 on the left to line 1 on the right
-      // Modern algorithms will match dynamic lines, but let's draw one Bezier curve to test the fluid concept!
-      const leftEl = document.getElementById('left-1');
-      const rightEl = document.getElementById('right-1');
-
-      if (leftEl && rightEl) {
-        const leftY = leftEl.getBoundingClientRect().top - leftPane.getBoundingClientRect().top + 10 - leftPane.scrollTop;
-        const rightY = rightEl.getBoundingClientRect().top - rightPane.getBoundingClientRect().top + 10 - rightPane.scrollTop;
-
+      const w = canvas.parentElement.clientWidth;
+      const h = canvas.parentElement.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      for (const c of chunks) {
+        const ly0 = yOf(leftPane, c.a0), ly1 = yOf(leftPane, c.a1);
+        const ry0 = yOf(rightPane, c.b0), ry1 = yOf(rightPane, c.b1);
+        if (Math.max(ly1, ry1) < 0 || Math.min(ly0, ry0) > h) continue;
+        const [r, g, b] = COLORS[c.tag];
         ctx.beginPath();
-        ctx.moveTo(0, leftY);
-        // Draw a sleek Bezier curve across the gutter mapping the two lines fluidly
-        ctx.bezierCurveTo(canvas.width / 2, leftY, canvas.width / 2, rightY, canvas.width, rightY);
-        ctx.strokeStyle = 'rgba(0, 122, 255, 0.5)';
-        ctx.lineWidth = 2;
+        ctx.moveTo(0, ly0);
+        ctx.bezierCurveTo(w / 2, ly0, w / 2, ry0, w, ry0);
+        ctx.lineTo(w, ry1);
+        ctx.bezierCurveTo(w / 2, ry1, w / 2, ly1, 0, ly1);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.3)`;
+        ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
+        ctx.lineWidth = 1;
+        ctx.fill();
         ctx.stroke();
       }
     }

@@ -3,6 +3,14 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { diffLines, diffWords, Chunk, Range } from './diff';
+
+// Subset of the built-in Git extension API we use; full typings live in vscode's extensions/git/src/api/git.d.ts.
+interface GitExtension {
+	getAPI(version: 1): {
+		getRepository(uri: vscode.Uri): { show(ref: string, path: string): Promise<string> } | null;
+	};
+}
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -25,8 +33,22 @@ export function activate(context: vscode.ExtensionContext) {
 		const currentText = activeEditor.document.getText();
 		const fileName = activeEditor.document.fileName;
 
-		// 2. Temporarily mock the previous text for demonstration purposes
-		const previousText = currentText.replace("Local Supabase", "Local Supbase (previous version)");
+		// 2. Get the last committed version of the file from git
+		let previousText: string;
+		try {
+			const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git');
+			if (!gitExtension) {
+				throw new Error('the built-in Git extension is disabled');
+			}
+			const repo = (await gitExtension.activate()).getAPI(1).getRepository(activeEditor.document.uri);
+			if (!repo) {
+				throw new Error('file is not in a git repository');
+			}
+			previousText = await repo.show('HEAD', fileName);
+		} catch (err) {
+			vscode.window.showErrorMessage(`No git HEAD version of ${path.basename(fileName)}: ${(err as Error).message}`);
+			return;
+		}
 
 		// 3. Create and show a new webview panel
 		const panel = vscode.window.createWebviewPanel(
@@ -51,14 +73,50 @@ export function deactivate() {}
 
 // helper function to generate the HTML content for the webview
 function getWebviewContent(context: vscode.ExtensionContext, oldText: string, newText: string): string {
-    // We break the strings into arrays of lines to display them in rows
-    const oldLines = oldText.split('\n').map((l, i) => `<div class="line" id="left-${i}">${l || '&nbsp;'}</div>`).join('');
-    const newLines = newText.split('\n').map((l, i) => `<div class="line" id="right-${i}">${l || '&nbsp;'}</div>`).join('');
+    const oldLines = oldText.split(/\r?\n/);
+    const newLines = newText.split(/\r?\n/);
+    const chunks = diffLines(oldLines, newLines);
+
+    // Replace chunks pair lines by position; extra unpaired lines keep only the chunk background.
+    const words = { a: new Map<number, Range[]>(), b: new Map<number, Range[]>() };
+    for (const c of chunks) {
+        if (c.tag !== 'replace') { continue; }
+        for (let k = 0; k < Math.min(c.a1 - c.a0, c.b1 - c.b0); k++) {
+            const w = diffWords(oldLines[c.a0 + k], newLines[c.b0 + k]);
+            words.a.set(c.a0 + k, w.a);
+            words.b.set(c.b0 + k, w.b);
+        }
+    }
 
     console.log('context.extensionPath', context.extensionPath);
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
+    // Function replacers: file text may contain `$&`-style patterns that string replacers expand.
     const htmlContent = fs.readFileSync(htmlPath, 'utf8')
-        .replace('{{oldText}}', oldLines)
-        .replace('{{newText}}', newLines);
+        .replace('{{oldText}}', () => renderLines(oldLines, chunks, 'a', words.a))
+        .replace('{{newText}}', () => renderLines(newLines, chunks, 'b', words.b))
+        .replace('{{chunks}}', () => JSON.stringify(chunks));
     return htmlContent;
+}
+
+function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: Map<number, Range[]>): string {
+    const cls: string[] = lines.map(() => 'line');
+    for (const c of chunks) {
+        const [s, e] = side === 'a' ? [c.a0, c.a1] : [c.b0, c.b1];
+        for (let i = s; i < e; i++) { cls[i] += ` chunk-${c.tag}`; }
+        if (s === e) {
+            if (s < lines.length) { cls[s] += ' gap-before'; } else if (s > 0) { cls[s - 1] += ' gap-after'; }
+        }
+    }
+    const escape = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const renderText = (l: string, ranges: Range[] = []) => {
+        let out = '', pos = 0;
+        for (const [s, e] of ranges) {
+            out += escape(l.slice(pos, s)) + `<span class="word-change">${escape(l.slice(s, e))}</span>`;
+            pos = e;
+        }
+        return out + escape(l.slice(pos));
+    };
+    return lines.map((l, i) =>
+        `<div class="${cls[i]}"><span class="line-num">${i + 1}</span>${renderText(l, words.get(i)) || ' '}</div>`
+    ).join('');
 }
