@@ -4,6 +4,7 @@
   "description": "Fluid gap-free side-by-side diff viewer (Beyond Compare and Meld Style).",
   "version": "0.0.1",
   "publisher": "easy-diff-viewer",
+  "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.128.0"
   },

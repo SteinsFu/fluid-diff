@@ -1,71 +1,69 @@
-# easy-diff-viewer README
+<div align="center">
 
-This is the README for your extension "easy-diff-viewer". After writing up a brief description, we recommend including the following sections.
+<img src="images/icon.png" alt="Fluid Diff icon" width="128">
 
-## Features
+# Fluid Diff
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+**Side-by-side diff viewer for VS Code, in the style of Meld and Beyond Compare.**
 
-For example if there is an image subfolder under your extension project workspace:
+Aligned panes · Word-level highlights · Syntax coloring
 
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+</div>
 
 ---
 
-## Following extension guidelines
+## Quick start
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+1. Open a file tracked by Git.
+2. Run **Open Fluid Diff**.
+3. Read the diff:
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+   | Left pane | Right pane |
+   | --- | --- |
+   | File as committed in `HEAD` | Current editor buffer, unsaved edits included |
 
-## Working with Markdown
+## Ways to open it
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+| Where | How |
+| --- | --- |
+| Command Palette | `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P`, then type `Open Fluid Diff` |
+| Editor title bar | Click **Open Fluid Diff** while a text editor has focus |
+| Keyboard shortcut | Bind any key to `easy-diff-viewer.openFluidDiff` |
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+## Features
 
-## For more information
+- **Aligned panes.** Inserted or deleted lines never push the two sides out of step.
+- **Block colors.** Inserted, deleted, and replaced blocks each get their own background.
+- **Word highlights.** Inside replaced lines, the exact changed words are marked.
+- **Syntax coloring.** Both panes use the language of the active file.
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+## Requirements
 
-**Enjoy!**
+- VS Code `1.128.0` or newer
+- Built-in **Git** extension enabled
+
+## Troubleshooting
+
+If a check fails, Fluid Diff shows an error and does not open the panel.
+
+| Error says | Fix |
+| --- | --- |
+| built-in Git extension is disabled | Enable the **Git** extension in the Extensions view |
+| file is not in a git repository | Open a file inside a Git repository |
+| No git HEAD version of the file | Commit the file once, then retry |
+
+## Roadmap
+
+- [x] Compare the active file with its `HEAD` version
+- [ ] Compare any two selected files
+
+## Development
+
+```bash
+npm install
+npm run compile   # build once
+npm run watch     # rebuild on change
+npm test          # compile, lint, then run tests
+```
+
+Press `F5` in VS Code to start an Extension Development Host with Fluid Diff loaded.
