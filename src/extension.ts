@@ -50,7 +50,7 @@ export function activate(context: vscode.ExtensionContext) {
         // 3. Create and show a new webview panel
         const panel = vscode.window.createWebviewPanel(
             'fluidDiff', // Identifies the type of the webview. Used internally
-            'Fluid Diff Viewer', // Title of the panel displayed to the user
+            `Fluid Diff - ${path.basename(fileName)}`, // Title of the panel displayed to the user
             vscode.ViewColumn.One, // Editor column to show the new webview panel in.
             {
                 enableScripts: true, // Crucial! allwo JS to run inside HTML webview

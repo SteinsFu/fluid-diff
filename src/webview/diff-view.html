@@ -25,10 +25,7 @@
       box-sizing: border-box;
     }
     #leftPane {
-      scrollbar-width: none;
-    }
-    #leftPane::-webkit-scrollbar {
-      display: none;
+      overflow-y: hidden;
     }
 
     /* LINE_HEIGHT and PANE_PAD in the script must match these */
@@ -220,6 +217,12 @@
     }
     leftPane.addEventListener('scroll', () => syncFrom(leftPane, rightPane, 0));
     rightPane.addEventListener('scroll', () => syncFrom(rightPane, leftPane, 1));
+    // overflow-y:hidden still accepts scrollTop, but the wheel no longer scrolls it.
+    leftPane.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      e.preventDefault();
+      leftPane.scrollTop += e.deltaY;
+    }, { passive: false });
 
     window.addEventListener('resize', resizeCanvas);
     setTimeout(resizeCanvas, 100);
