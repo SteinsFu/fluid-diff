@@ -1,12 +1,16 @@
 {
-  "name": "easy-diff-viewer",
-  "displayName": "easy-diff-viewer",
+  "name": "fluid-diff",
+  "displayName": "fluid-diff",
   "description": "Fluid gap-free side-by-side diff viewer (Beyond Compare and Meld Style).",
   "version": "0.0.1",
-  "publisher": "easy-diff-viewer",
+  "publisher": "fluid-diff",
   "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.128.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SteinsFu/fluid-diff"
   },
   "categories": [
     "Other"
@@ -19,14 +23,14 @@
   "contributes": {
     "commands": [
       {
-        "command": "easy-diff-viewer.openFluidDiff",
+        "command": "fluid-diff.openFluidDiff",
         "title": "Open Fluid Diff"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "easy-diff-viewer.openFluidDiff",
+          "command": "fluid-diff.openFluidDiff",
           "when": "editorTextFocus",
           "group": "navigation"
         }

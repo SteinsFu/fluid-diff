@@ -18,10 +18,7 @@ export function activate(context: vscode.ExtensionContext) {
     // The command has been defined in the package.json file
     // Now provide the implementation of the command with registerCommand
     // The commandId parameter must match the command field in package.json
-    const disposable = vscode.commands.registerCommand('easy-diff-viewer.openFluidDiff', async () => {
-        // The code you place here will be executed every time your command is executed
-        // Display a message box to the user
-        vscode.window.showInformationMessage('Open Fluid Diff from easy-diff-viewer!');
+    const disposable = vscode.commands.registerCommand('fluid-diff.openFluidDiff', async () => {
 
         const activeEditor = vscode.window.activeTextEditor;
         if (!activeEditor) {
@@ -103,10 +100,12 @@ async function getWebviewContent(context: vscode.ExtensionContext, oldText: stri
 
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
     // Function replacers: file text may contain `$&`-style patterns that string replacers expand.
-    const htmlContent = fs.readFileSync(htmlPath, 'utf8')
-        .replace('{{oldText}}', () => renderLines(oldLines, chunks, 'a', words.a, oldColoredToks))
-        .replace('{{newText}}', () => renderLines(newLines, chunks, 'b', words.b, newColoredToks))
-        .replace('{{chunks}}', () => JSON.stringify(chunks));
+    const htmlContent = fs.readFileSync(htmlPath, 'utf8').replace(
+        /\{\{(oldText|newText|chunks)\}\}/g,
+        (token) => token === '{{oldText}}' ? renderLines(oldLines, chunks, 'a', words.a, oldColoredToks)
+            : token === '{{newText}}' ? renderLines(newLines, chunks, 'b', words.b, newColoredToks)
+            : JSON.stringify(chunks)
+    );
     return htmlContent;
 }
 
