@@ -4,7 +4,7 @@ import * as assert from 'assert';
 // as well as import your extension to test it
 import * as vscode from 'vscode';
 // import * as myExtension from '../../extension';
-import { diffLines, diffWords } from '../diff';
+import { diffLines, diffWords, pairLines } from '../diff';
 
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('Start all tests.');
@@ -25,8 +25,19 @@ suite('Extension Test Suite', () => {
 		]);
 	});
 
-	test('diffWords ranges', () => {
-		assert.deepStrictEqual(diffWords('let total = 0;', 'let sum = 0;'), { a: [[4, 9]], b: [[4, 7]] });
-		assert.deepStrictEqual(diffWords('a b', 'a b c'), { a: [], b: [[3, 5]] });
+	test('diffWords marks', () => {
+		assert.deepStrictEqual(diffWords('let total = 0;', 'let sum = 0;'), 
+			{ a: [[4, 9, 'word-replace']], b: [[4, 7, 'word-replace']] });
+		assert.deepStrictEqual(diffWords('a b', 'a b c'), 
+			{ a: [3, 3, 'word-gap-insert'], b: [3, 5, 'word-insert'] });
+		assert.deepStrictEqual(diffWords('a b c', 'a c'), 
+			{ a: [2, 4, 'word-delete'], b: [2, 2, 'word-gap-delete'] });
+	});
+
+	test('pairLines by similarity', () => {
+		assert.deepStrictEqual(pairLines(['let total = 0;'], ['let sum = 0;']), [[0, 0]]);
+		// Inserted line in the middle: foo pairs with foo, not with the new line at the same position.
+		assert.deepStrictEqual(pairLines(['foo(a, b)', 'bar(x)'], ['brand new line', 'foo(a, c)', 'bar(y, x)']), [[0, 1], [1, 2]]);
+		assert.deepStrictEqual(pairLines(['def calculate_total(items):'], ['def update_quantity(self, new_quantity):']), []);
 	});
 });

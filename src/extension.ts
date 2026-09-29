@@ -3,7 +3,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { diffLines, diffWords, Chunk, Range } from './diff';
+import { diffLines, diffWords, pairLines, Chunk, WordMark } from './diff';
 
 // Subset of the built-in Git extension API we use; full typings live in vscode's extensions/git/src/api/git.d.ts.
 interface GitExtension {
@@ -60,6 +60,10 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		);
 
+		// Mock test data
+		// const previousText = fs.readFileSync(path.join(context.extensionPath, 'examples', 'example1_old.py'), 'utf8');
+		// const currentText = fs.readFileSync(path.join(context.extensionPath, 'examples', 'example1_new.py'), 'utf8');
+
 		// 4. Set the HTML content of the webview panel
 		panel.webview.html = getWebviewContent(context, previousText, currentText);
 	});
@@ -77,18 +81,17 @@ function getWebviewContent(context: vscode.ExtensionContext, oldText: string, ne
     const newLines = newText.split(/\r?\n/);
     const chunks = diffLines(oldLines, newLines);
 
-    // Replace chunks pair lines by position; extra unpaired lines keep only the chunk background.
-    const words = { a: new Map<number, Range[]>(), b: new Map<number, Range[]>() };
+    // Word highlights only for similar line pairs; unpaired lines keep only the chunk background.
+    const words = { a: new Map<number, WordMark[]>(), b: new Map<number, WordMark[]>() };
     for (const c of chunks) {
         if (c.tag !== 'replace') { continue; }
-        for (let k = 0; k < Math.min(c.a1 - c.a0, c.b1 - c.b0); k++) {
-            const w = diffWords(oldLines[c.a0 + k], newLines[c.b0 + k]);
-            words.a.set(c.a0 + k, w.a);
-            words.b.set(c.b0 + k, w.b);
+        for (const [i, j] of pairLines(oldLines.slice(c.a0, c.a1), newLines.slice(c.b0, c.b1))) {
+            const w = diffWords(oldLines[c.a0 + i], newLines[c.b0 + j]);
+            words.a.set(c.a0 + i, w.a);
+            words.b.set(c.b0 + j, w.b);
         }
     }
 
-    console.log('context.extensionPath', context.extensionPath);
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
     // Function replacers: file text may contain `$&`-style patterns that string replacers expand.
     const htmlContent = fs.readFileSync(htmlPath, 'utf8')
@@ -98,7 +101,7 @@ function getWebviewContent(context: vscode.ExtensionContext, oldText: string, ne
     return htmlContent;
 }
 
-function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: Map<number, Range[]>): string {
+function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: Map<number, WordMark[]>): string {
     const cls: string[] = lines.map(() => 'line');
     for (const c of chunks) {
         const [s, e] = side === 'a' ? [c.a0, c.a1] : [c.b0, c.b1];
@@ -108,10 +111,10 @@ function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: M
         }
     }
     const escape = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const renderText = (l: string, ranges: Range[] = []) => {
+    const renderText = (l: string, marks: WordMark[] = []) => {
         let out = '', pos = 0;
-        for (const [s, e] of ranges) {
-            out += escape(l.slice(pos, s)) + `<span class="word-change">${escape(l.slice(s, e))}</span>`;
+        for (const [s, e, cls] of marks) {
+            out += escape(l.slice(pos, s)) + `<span class="${cls}">${escape(l.slice(s, e))}</span>`;
             pos = e;
         }
         return out + escape(l.slice(pos));
