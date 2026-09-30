@@ -19,23 +19,27 @@ export type WordMark = [start: number, end: number, cls: string];
 export function pairLines(a: string[], b: string[]): [number, number][] {
     const n = a.length, m = b.length;
     if (n * m > 1_000_000) { return []; }
-    // word-overlap (Dice) similarity with a fixed 0.5 cutoff; ignores word order and
-    // punctuation. Swap for a per-pair token LCS ratio if pairing misfires on real code.
+    // word-overlap (Dice) similarity with a fixed 0.5 cutoff; ignores word order, and ignores
+    // punctuation unless one line has no words. Swap for a per-pair token LCS ratio if pairing misfires on real code.
     const MIN_SIMILARITY = 0.5;
     const words = (s: string) => s.match(/[\p{L}\p{N}_]+/gu) ?? [];
+    const tokens = (s: string) => s.match(/[\p{L}\p{N}_]+|\s+|[^\p{L}\p{N}_\s]/gu) ?? [];
     const wa = a.map(words), wb = b.map(words);
+    const ta = a.map(tokens), tb = b.map(tokens);
     const sim = new Float64Array(n * m);
     for (let i = 0; i < n; i++) {
         for (let j = 0; j < m; j++) {
-            if (!wa[i].length || !wb[j].length) { continue; }
+            const left = (!wa[i].length || !wb[j].length) ? ta[i] : wa[i];
+            const right = (!wa[i].length || !wb[j].length) ? tb[j] : wb[j];
+            if (!left.length || !right.length) { continue; }
             const counts = new Map<string, number>();
-            for (const w of wa[i]) { counts.set(w, (counts.get(w) ?? 0) + 1); }
+            for (const w of left) { counts.set(w, (counts.get(w) ?? 0) + 1); }
             let shared = 0;
-            for (const w of wb[j]) {
+            for (const w of right) {
                 const c = counts.get(w);
                 if (c) { shared++; counts.set(w, c - 1); }
             }
-            const s = 2 * shared / (wa[i].length + wb[j].length);
+            const s = 2 * shared / (left.length + right.length);
             if (s >= MIN_SIMILARITY) { sim[i * m + j] = s; }
         }
     }

@@ -34,6 +34,13 @@
           "when": "editorTextFocus",
           "group": "navigation"
         }
+      ],
+      "explorer/context": [
+        {
+          "command": "fluid-diff.openFluidDiff",
+          "when": "!explorerResourceIsFolder",
+          "group": "navigation"
+        }
       ]
     }
   },

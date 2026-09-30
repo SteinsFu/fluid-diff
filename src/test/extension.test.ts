@@ -39,5 +39,7 @@ suite('Extension Test Suite', () => {
         // Inserted line in the middle: foo pairs with foo, not with the new line at the same position.
         assert.deepStrictEqual(pairLines(['foo(a, b)', 'bar(x)'], ['brand new line', 'foo(a, c)', 'bar(y, x)']), [[0, 1], [1, 2]]);
         assert.deepStrictEqual(pairLines(['def calculate_total(items):'], ['def update_quantity(self, new_quantity):']), []);
+        // Also handles punctuation
+        assert.deepStrictEqual(pairLines(['```'], ['adasd```']), [[0, 0]]);
     });
 });

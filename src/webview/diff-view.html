@@ -218,6 +218,7 @@
     leftPane.addEventListener('scroll', () => syncFrom(leftPane, rightPane, 0));
     rightPane.addEventListener('scroll', () => syncFrom(rightPane, leftPane, 1));
     // overflow-y:hidden still accepts scrollTop, but the wheel no longer scrolls it.
+    // TODO: inefficient
     leftPane.addEventListener('wheel', (e) => {
       if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
       e.preventDefault();
