@@ -27,6 +27,11 @@ export function pairLines(a: string[], b: string[]): [number, number][] {
     const wa = a.map(words), wb = b.map(words);
     const ta = a.map(tokens), tb = b.map(tokens);
     const sim = new Float64Array(n * m);
+    // Pairing by token similarity: O(n*m)
+    // > first try word similarity, then token similarity
+    // > although (ta, tb) contains all words and puncutation, but (wa, wb) are still needed 
+    // > because comparing (ta, tb) only, will pair unrelated lines.
+    // > e.g. "foo(a, b)" vs "bar(c, d)" => shared = ["(", ",", " ", ")", ";"] => score = 0.625 > 5 
     for (let i = 0; i < n; i++) {
         for (let j = 0; j < m; j++) {
             const left = (!wa[i].length || !wb[j].length) ? ta[i] : wa[i];

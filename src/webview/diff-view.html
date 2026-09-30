@@ -15,17 +15,62 @@
     }
 
     .pane {
-      flex: 0 0 calc(50% - 30px); /* half width minus half gutter */
-      width: calc(50% - 30px);
+      flex: 0 0 calc(50% - 30px - 10px); /* half width - half gutter - ruler width */
+      width: calc(50% - 30px - 10px);
       min-width: 0;
       overflow: auto;
       padding: 10px 0;
       white-space: pre;
       position: relative;
       box-sizing: border-box;
+      scrollbar-width: none;
     }
-    #leftPane {
-      overflow-y: hidden;
+
+    .pane::-webkit-scrollbar {
+      display: none;
+    }
+
+    #leftRuler {
+      flex: 0 0 10px; 
+      position: relative; 
+      background: #252526;
+    }
+    #rightRuler {
+      flex: 0 0 10px; 
+      position: relative; 
+      background: #252526;
+    }
+    /* Viewport follows current window scroll position */
+    #leftRulerViewport {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid #ffffff;
+      z-index: 99;
+    }
+    #rightRulerViewport {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid #ffffff;
+      z-index: 99;
+    }
+    .ruler-mark {
+      background-color: currentColor;
+      position: absolute;
+      width: 100%;
+      min-height: 2px;
+    }
+    .ruler-mark-insert { color: rgb(80, 200, 80); }
+    .ruler-mark-delete { color: rgb(240, 90, 90); }
+    .ruler-mark-replace { color: rgb(224, 184, 74); }
+    .ruler-mark:hover {
+      filter: brightness(1.4);
+      box-shadow: 0 0 0 2px currentColor;
+      z-index: 10;
+      cursor: pointer;
     }
 
     /* LINE_HEIGHT and PANE_PAD in the script must match these */
@@ -122,11 +167,13 @@
 </head>
 
 <body>
+  <div id="leftRuler"><div id="leftRulerViewport"></div></div>
   <div class="pane" id="leftPane"><div class="lines">{{oldText}}</div></div>
   <div class="gutter">
     <canvas id="canvas"></canvas>
   </div>
   <div class="pane" id="rightPane"><div class="lines">{{newText}}</div></div>
+  <div id="rightRuler"><div id="rightRulerViewport"></div></div>
 
   <script>
     const leftPane = document.getElementById('leftPane');
@@ -142,12 +189,53 @@
       replace: [240, 215, 140],
     };
 
+    // Draw ruler marks & viewports
+    drawRulerMarks();
+    function drawRulerMarks() {
+      const leftRuler = document.getElementById('leftRuler');
+      const rightRuler = document.getElementById('rightRuler');
+      const nA = leftPane.querySelectorAll('.line').length;    // number of lines in left pane
+      const nB = rightPane.querySelectorAll('.line').length;   // number of lines in right pane
+      
+      for (const c of chunks) {
+        // left pane ruler (only draw marks for non-empty chunks)
+        if (c.a0 !== c.a1) {
+          const m = document.createElement('div');
+          m.className = `ruler-mark ruler-mark-${c.tag}`;
+          m.style.top = (c.a0 / nA) * 100 + '%';
+          m.style.height = (c.a1 - c.a0) / nA * 100 + '%';
+          leftRuler.appendChild(m);
+        }
+        // right pane ruler (only draw marks for non-empty chunks)
+        if (c.b0 !== c.b1) {
+          const m = document.createElement('div');
+          m.className = `ruler-mark ruler-mark-${c.tag}`;
+          m.style.top = (c.b0 / nB) * 100 + '%';
+          m.style.height = (c.b1 - c.b0) / nB * 100 + '%';
+          rightRuler.appendChild(m);
+        }
+      }
+    }
+    function drawRulerViewports() {
+      const leftViewport = document.getElementById('leftRulerViewport');
+      const rightViewport = document.getElementById('rightRulerViewport');
+      leftViewport.style.top = leftPane.scrollTop / leftPane.scrollHeight * 100 + '%';
+      leftViewport.style.height = leftPane.clientHeight / leftPane.scrollHeight * 100 + '%';
+      rightViewport.style.top = rightPane.scrollTop / rightPane.scrollHeight * 100 + '%';
+      rightViewport.style.height = rightPane.clientHeight / rightPane.scrollHeight * 100 + '%';
+    }
+    function jumpTo(e, ruler, pane) {
+      const r = ruler.getBoundingClientRect();
+      pane.scrollTop = (e.clientY - r.top) / r.height * pane.scrollHeight - pane.clientHeight / 2;
+    }
+
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
       canvas.width = canvas.parentElement.clientWidth * dpr;
       canvas.height = canvas.parentElement.clientHeight * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       drawConnections();
+      drawRulerViewports();
     }
 
     // Line boundary k (top of line k) in viewport pixels; lines have fixed height, so no DOM lookups.
@@ -213,17 +301,42 @@
     function scheduleDraw() {
       if (drawPending) return;
       drawPending = true;
-      requestAnimationFrame(() => { drawPending = false; drawConnections(); });
+      requestAnimationFrame(() => { 
+        drawPending = false; 
+        drawConnections(); 
+        drawRulerViewports();
+      });
     }
     leftPane.addEventListener('scroll', () => syncFrom(leftPane, rightPane, 0));
     rightPane.addEventListener('scroll', () => syncFrom(rightPane, leftPane, 1));
+    // Rulers
+    leftRuler.addEventListener('pointerdown', (e) => {
+      leftRuler.setPointerCapture(e.pointerId);
+      jumpTo(e, leftRuler, leftPane);
+    });
+    leftRuler.addEventListener('pointermove', (e) => {
+      if (e.buttons & 1) jumpTo(e, leftRuler, leftPane);
+    });
+    rightRuler.addEventListener('pointerdown', (e) => {
+      rightRuler.setPointerCapture(e.pointerId);
+      jumpTo(e, rightRuler, rightPane);
+    });
+    rightRuler.addEventListener('pointermove', (e) => {
+      if (e.buttons & 1) jumpTo(e, rightRuler, rightPane);
+    });
+    leftRuler.addEventListener('wheel', (e) => { 
+      leftPane.scrollTop += e.deltaY; 
+    }, { passive: true });
+    rightRuler.addEventListener('wheel', (e) => { 
+      rightPane.scrollTop += e.deltaY; 
+    }, { passive: true });
     // overflow-y:hidden still accepts scrollTop, but the wheel no longer scrolls it.
     // TODO: inefficient
-    leftPane.addEventListener('wheel', (e) => {
-      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-      e.preventDefault();
-      leftPane.scrollTop += e.deltaY;
-    }, { passive: false });
+    // leftPane.addEventListener('wheel', (e) => {
+    //   if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    //   e.preventDefault();
+    //   leftPane.scrollTop += e.deltaY;
+    // }, { passive: false });
 
     window.addEventListener('resize', resizeCanvas);
     setTimeout(resizeCanvas, 100);

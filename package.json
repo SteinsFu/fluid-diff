@@ -32,14 +32,14 @@
         {
           "command": "fluid-diff.openFluidDiff",
           "when": "editorTextFocus",
-          "group": "navigation"
+          "group": "3_compare"
         }
       ],
       "explorer/context": [
         {
           "command": "fluid-diff.openFluidDiff",
           "when": "!explorerResourceIsFolder",
-          "group": "navigation"
+          "group": "3_compare"
         }
       ]
     }

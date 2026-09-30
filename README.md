@@ -29,6 +29,7 @@ Aligned panes · Word-level highlights · Syntax coloring
 | Command Palette | `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P`, then type `Open Fluid Diff` |
 | Editor title bar | Click **Open Fluid Diff** while a text editor has focus |
 | Keyboard shortcut | Bind any key to `fluid-diff.openFluidDiff` |
+| Explorer | Right click file and click **Open Fluid Diff** |
 
 ## Features
 
@@ -56,7 +57,7 @@ If a check fails, Fluid Diff shows an error and does not open the panel.
 
 - [x] Compare the active file with its `HEAD` version
 - [ ] Compare any two selected files
-- [ ] Scrollbar previewer
+- [x] Overview scrollbar ruler
 - [ ] Light Theme
 
 ## Development
