@@ -4,7 +4,7 @@
 
 # Fluid Diff
 
-**Side-by-side diff viewer for VS Code, in the style of Meld and Beyond Compare.**
+**Side-by-side diff viewer for VS Code, in the style of Meld and SmartGit.**
 
 Aligned panes · Word-level highlights · Syntax coloring
 
@@ -74,6 +74,12 @@ These messages come from **Fluid Diff: Git**. If a check fails, the panel stays 
 - [x] Compare any two selected files
 - [x] Overview scrollbar ruler
 - [ ] Light Theme
+
+## Limits
+
+- A gap bigger than 25M cells (about 5000×5000 lines) with no unique line inside becomes one replace chunk.
+- Edit-similarity scoring only runs on gaps up to 1M cells.
+- A chunk larger than 4M token pairs gets background color only, no word marks.
 
 ## Development
 

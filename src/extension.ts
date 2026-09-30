@@ -3,7 +3,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { diffLines, diffWords, pairLines, Chunk, WordMark } from './diff';
+import { diffLines, diffBlock, Chunk, WordMark } from './diff';
 
 // Subset of the built-in Git extension API we use; full typings live in vscode's extensions/git/src/api/git.d.ts.
 interface GitExtension {
@@ -115,27 +115,13 @@ async function getWebviewContent(context: vscode.ExtensionContext, textA: string
         syntaxColoredLines(linesB.join('\n'), langB),
     ])
 
-    // Word highlights only for similar line pairs;
-    // Only for replace chunks (pure insert/delete chunks are not highlighted cuz background color is enough to distinguish)
+    // Word highlights only for replace chunks (pure insert/delete chunks are not highlighted cuz background color is enough to distinguish)
     const words = { a: new Map<number, WordMark[]>(), b: new Map<number, WordMark[]>() };
     for (const c of chunks) {
         if (c.tag !== 'replace') { continue; }
-        for (const [i, j] of pairLines(linesA.slice(c.a0, c.a1), linesB.slice(c.b0, c.b1))) {
-            const w = diffWords(linesA[c.a0 + i], linesB[c.b0 + j]);
-            words.a.set(c.a0 + i, w.a);
-            words.b.set(c.b0 + j, w.b);
-        }
-        // handle left-over lines that are not paired
-        for (let i = c.a0; i < c.a1; i++) { 
-            if (!words.a.has(i)) { 
-                words.a.set(i, [[0, linesA[i].length, 'word-delete']]); 
-            } 
-        }
-        for (let j = c.b0; j < c.b1; j++) { 
-            if (!words.b.has(j)) { 
-                words.b.set(j, [[0, linesB[j].length, 'word-insert']]); 
-            } 
-        }
+        const w = diffBlock(linesA.slice(c.a0, c.a1), linesB.slice(c.b0, c.b1));
+        w.a.forEach((marks, i) => words.a.set(c.a0 + i, marks));
+        w.b.forEach((marks, j) => words.b.set(c.b0 + j, marks));
     }
 
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
