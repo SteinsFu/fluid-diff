@@ -23,22 +23,31 @@
   "contributes": {
     "commands": [
       {
-        "command": "fluid-diff.openFluidDiff",
-        "title": "Open Fluid Diff"
+        "command": "fluid-diff.fluidDiffGit",
+        "title": "Fluid Diff: Git"
+      },
+      {
+        "command": "fluid-diff.fluidDiffSelected",
+        "title": "Fluid Diff: Compare Selected"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "fluid-diff.openFluidDiff",
+          "command": "fluid-diff.fluidDiffGit",
           "when": "editorTextFocus",
           "group": "3_compare"
         }
       ],
       "explorer/context": [
         {
-          "command": "fluid-diff.openFluidDiff",
-          "when": "!explorerResourceIsFolder",
+          "command": "fluid-diff.fluidDiffGit",
+          "when": "!explorerResourceIsFolder && !listMultiSelection",
+          "group": "3_compare"
+        },
+        {
+          "command": "fluid-diff.fluidDiffSelected",
+          "when": "!explorerResourceIsFolder && listDoubleSelection",
           "group": "3_compare"
         }
       ]

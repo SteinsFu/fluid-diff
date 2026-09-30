@@ -14,29 +14,44 @@ Aligned panes · Word-level highlights · Syntax coloring
 
 ## Quick start
 
+### Git diff
+
 1. Open a file tracked by Git.
-2. Run **Open Fluid Diff**.
+2. Run **Fluid Diff: Git**.
 3. Read the diff:
 
    | Left pane | Right pane |
    | --- | --- |
    | File as committed in `HEAD` | Current editor buffer, unsaved edits included |
 
+### Selected files
+
+1. In the Explorer, select exactly two files.
+2. Right-click and run **Fluid Diff: Compare Selected**.
+3. Read the diff:
+
+   | Left pane | Right pane |
+   | --- | --- |
+   | First file in the selection | Second file in the selection |
+
 ## Ways to open it
 
 | Where | How |
 | --- | --- |
-| Command Palette | `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P`, then type `Open Fluid Diff` |
-| Editor title bar | Click **Open Fluid Diff** while a text editor has focus |
-| Keyboard shortcut | Bind any key to `fluid-diff.openFluidDiff` |
-| Explorer | Right click file and click **Open Fluid Diff** |
+| Command Palette | `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P`, then **Fluid Diff: Git** |
+| Editor title bar | Click **Fluid Diff: Git** while a text editor has focus |
+| Keyboard shortcut | Bind a key to `fluid-diff.fluidDiffGit` |
+| Explorer, one file | Right-click a file and click **Fluid Diff: Git** |
+| Explorer, two files | Select exactly two files, right-click, and click **Fluid Diff: Compare Selected** (`fluid-diff.fluidDiffSelected`) |
 
 ## Features
 
 - **Aligned panes.** Inserted or deleted lines never push the two sides out of step.
 - **Block colors.** Inserted, deleted, and replaced blocks each get their own background.
 - **Word highlights.** Inside replaced lines, the exact changed words are marked.
-- **Syntax coloring.** Both panes use the language of the active file.
+- **Syntax coloring.** Each pane uses the language of its own file.
+- **Overview scrollbar rulers.** A ruler beside each pane maps that whole file. Green marks inserts, red marks deletes, and yellow marks replacements. A translucent box shows the visible window. Click a ruler to jump that pane to the clicked spot.
+- **Compare any two selected files.** Pick two files in the Explorer and open them side by side. This command reads the two files directly.
 
 ## Requirements
 
@@ -45,7 +60,7 @@ Aligned panes · Word-level highlights · Syntax coloring
 
 ## Troubleshooting
 
-If a check fails, Fluid Diff shows an error and does not open the panel.
+These messages come from **Fluid Diff: Git**. If a check fails, the panel stays closed.
 
 | Error says | Fix |
 | --- | --- |
@@ -56,7 +71,7 @@ If a check fails, Fluid Diff shows an error and does not open the panel.
 ## Roadmap
 
 - [x] Compare the active file with its `HEAD` version
-- [ ] Compare any two selected files
+- [x] Compare any two selected files
 - [x] Overview scrollbar ruler
 - [ ] Light Theme
 

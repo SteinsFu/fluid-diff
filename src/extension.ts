@@ -18,7 +18,9 @@ export function activate(context: vscode.ExtensionContext) {
     // The command has been defined in the package.json file
     // Now provide the implementation of the command with registerCommand
     // The commandId parameter must match the command field in package.json
-    const disposable = vscode.commands.registerCommand('fluid-diff.openFluidDiff', async () => {
+
+    // Command 1: Open Fluid Diff: Git
+    const fluidDiffGitDisposable = vscode.commands.registerCommand('fluid-diff.fluidDiffGit', async () => {
 
         const activeEditor = vscode.window.activeTextEditor;
         if (!activeEditor) {
@@ -58,7 +60,8 @@ export function activate(context: vscode.ExtensionContext) {
         );
 
         // 4. Set the HTML content of the webview panel
-        panel.webview.html = await getWebviewContent(context, previousText, currentText, activeEditor.document.languageId);
+        const lang = activeEditor.document.languageId;
+        panel.webview.html = await getWebviewContent(context, previousText, currentText, lang, lang);
 
         // Mock test data
         // panel.webview.html = await getWebviewContent(context,
@@ -68,7 +71,32 @@ export function activate(context: vscode.ExtensionContext) {
         // );
     });
 
-    context.subscriptions.push(disposable);
+    // Command 2: Compare Selected
+    const fluidDiffSelectedDisposable = vscode.commands.registerCommand('fluid-diff.fluidDiffSelected', async (uri, uris?: vscode.Uri[]) => {
+        if (!uris || uris.length !== 2) return;
+
+        // 1. Get the documents and languages
+        const [uri1, uri2] = uris;
+        const doc1 = await vscode.workspace.openTextDocument(uri1);
+        const doc2 = await vscode.workspace.openTextDocument(uri2);
+        const lang1 = doc1.languageId;
+        const lang2 = doc2.languageId;
+
+        // 2. Create and show a new webview panel
+        const panel = vscode.window.createWebviewPanel(
+            'fluidDiff',
+            `Fluid Diff - ${path.basename(uri1.fsPath)} vs ${path.basename(uri2.fsPath)}`,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true, // Crucial! allwo JS to run inside HTML webview
+            }
+        );
+
+        // 3. Set the HTML content of the webview panel
+        panel.webview.html = await getWebviewContent(context, doc1.getText(), doc2.getText(), lang1, lang2);
+    });
+
+    context.subscriptions.push(fluidDiffGitDisposable, fluidDiffSelectedDisposable);
 }
 
 // This method is called when your extension is deactivated
@@ -76,23 +104,23 @@ export function deactivate() {}
 
 
 // helper function to generate the HTML content for the webview
-async function getWebviewContent(context: vscode.ExtensionContext, oldText: string, newText: string, lang: string): Promise<string> {
-    const oldLines = oldText.split(/\r?\n/);
-    const newLines = newText.split(/\r?\n/);
-    const chunks = diffLines(oldLines, newLines);
+async function getWebviewContent(context: vscode.ExtensionContext, textA: string, textB: string, langA: string, langB: string): Promise<string> {
+    const linesA = textA.split(/\r?\n/);
+    const linesB = textB.split(/\r?\n/);
+    const chunks = diffLines(linesA, linesB);
 
     // syntax-color the lines
-    const [oldColoredToks, newColoredToks] = await Promise.all([
-        syntaxColoredLines(oldLines.join('\n'), lang),
-        syntaxColoredLines(newLines.join('\n'), lang),
+    const [coloreToksA, coloreToksB] = await Promise.all([
+        syntaxColoredLines(linesA.join('\n'), langA),
+        syntaxColoredLines(linesB.join('\n'), langB),
     ])
 
     // Word highlights only for similar line pairs; unpaired lines keep only the chunk background.
     const words = { a: new Map<number, WordMark[]>(), b: new Map<number, WordMark[]>() };
     for (const c of chunks) {
         if (c.tag !== 'replace') { continue; }
-        for (const [i, j] of pairLines(oldLines.slice(c.a0, c.a1), newLines.slice(c.b0, c.b1))) {
-            const w = diffWords(oldLines[c.a0 + i], newLines[c.b0 + j]);
+        for (const [i, j] of pairLines(linesA.slice(c.a0, c.a1), linesB.slice(c.b0, c.b1))) {
+            const w = diffWords(linesA[c.a0 + i], linesB[c.b0 + j]);
             words.a.set(c.a0 + i, w.a);
             words.b.set(c.b0 + j, w.b);
         }
@@ -101,9 +129,9 @@ async function getWebviewContent(context: vscode.ExtensionContext, oldText: stri
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
     // Function replacers: file text may contain `$&`-style patterns that string replacers expand.
     const htmlContent = fs.readFileSync(htmlPath, 'utf8').replace(
-        /\{\{(oldText|newText|chunks)\}\}/g,
-        (token) => token === '{{oldText}}' ? renderLines(oldLines, chunks, 'a', words.a, oldColoredToks)
-            : token === '{{newText}}' ? renderLines(newLines, chunks, 'b', words.b, newColoredToks)
+        /\{\{(textA|textB|chunks)\}\}/g,
+        (token) => token === '{{textA}}' ? renderLines(linesA, chunks, 'a', words.a, coloreToksA)
+            : token === '{{textB}}' ? renderLines(linesB, chunks, 'b', words.b, coloreToksB)
             : JSON.stringify(chunks)
     );
     return htmlContent;
