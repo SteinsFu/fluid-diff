@@ -109,7 +109,28 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    context.subscriptions.push(fluidDiffGitDisposable, fluidDiffSelectedDisposable, selectThemeDisposable);
+    // Command 4: From Diff Editor
+    const fromDiffEditorDisposable = vscode.commands.registerCommand('fluid-diff.fromDiffEditor', async () => {
+        const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+        if (input instanceof vscode.TabInputTextDiff) {
+            const oldDoc = await vscode.workspace.openTextDocument(input.original);
+            const newDoc = await vscode.workspace.openTextDocument(input.modified);
+            const lang1 = oldDoc.languageId;
+            const lang2 = newDoc.languageId;
+            const theme = getTheme();
+            const panel = vscode.window.createWebviewPanel(
+                'fluidDiff',
+                `Fluid Diff - ${path.basename(oldDoc.fileName)} vs ${path.basename(newDoc.fileName)}`,
+                vscode.ViewColumn.One,
+                {
+                    enableScripts: true, // Crucial! allwo JS to run inside HTML webview
+                }
+            );
+            panel.webview.html = await getWebviewContent(context, oldDoc.getText(), newDoc.getText(), lang1, lang2, theme);
+        }
+    });
+
+    context.subscriptions.push(fluidDiffGitDisposable, fluidDiffSelectedDisposable, selectThemeDisposable, fromDiffEditorDisposable);
 }
 
 // This method is called when your extension is deactivated

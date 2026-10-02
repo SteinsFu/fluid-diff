@@ -34,6 +34,18 @@ Aligned panes · Word-level highlights · Syntax coloring
    | --- | --- |
    | First file in the selection | Second file in the selection |
 
+### From a diff editor
+
+1. Open a single-file diff in VS Code, for example from the Source Control view or the Timeline view.
+2. Click **Fluid Diff: From Diff Editor** in the editor title bar.
+3. Read the diff:
+
+   | Left pane | Right pane |
+   | --- | --- |
+   | Original side of the diff | Modified side of the diff |
+
+Multi-file diffs, such as a whole commit opened from the Source Control Graph, are not supported. Open a single file's diff instead.
+
 ## Ways to open it
 
 | Where | How |
@@ -43,6 +55,7 @@ Aligned panes · Word-level highlights · Syntax coloring
 | Keyboard shortcut | Bind a key to `fluid-diff.fluidDiffGit` |
 | Explorer, one file | Right-click a file and click **Fluid Diff: Git** |
 | Explorer, two files | Select exactly two files, right-click, and click **Fluid Diff: Compare Selected** (`fluid-diff.fluidDiffSelected`) |
+| Diff editor title bar | Click **Fluid Diff: From Diff Editor** (`fluid-diff.fromDiffEditor`) while a single-file diff is active |
 
 ## Themes
 
@@ -65,6 +78,7 @@ The theme applies to diff panels opened after the change.
 - **Syntax coloring.** Each pane uses the language of its own file.
 - **Overview scrollbar rulers.** A ruler beside each pane maps that whole file. Green marks inserts, red marks deletes, and yellow marks replacements. A translucent box shows the visible window. Click a ruler to jump that pane to the clicked spot.
 - **Compare any two selected files.** Pick two files in the Explorer and open them side by side. This command reads the two files directly.
+- **Reopen any VS Code diff.** From a built-in single-file diff, such as a past commit in the Timeline view, reopen the same two sides in Fluid Diff.
 - **Themes.** Auto, Light, Dark, and Dracula. Auto follows the VS Code color theme.
 
 ## Requirements
@@ -88,6 +102,7 @@ These messages come from **Fluid Diff: Git**. If a check fails, the panel stays 
 - [x] Compare any two selected files
 - [x] Overview scrollbar ruler
 - [x] Themes: Auto, Light, Dark, Dracula
+- [x] Reopen a built-in single-file diff
 - [ ] Open changes from git graph
 
 ## Limits

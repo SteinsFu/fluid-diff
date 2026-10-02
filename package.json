@@ -33,6 +33,10 @@
       {
         "command": "fluid-diff.selectTheme",
         "title": "Fluid Diff: Select Theme"
+      },
+      {
+        "command": "fluid-diff.fromDiffEditor",
+        "title": "Fluid Diff: From Diff Editor",
       }
     ],
     "menus": {
@@ -41,6 +45,11 @@
           "command": "fluid-diff.fluidDiffGit",
           "when": "editorTextFocus",
           "group": "3_compare"
+        },
+        { 
+          "command": "fluid-diff.fromDiffEditor", 
+          "when": "isInDiffEditor", 
+          "group": "navigation" 
         }
       ],
       "explorer/context": [
