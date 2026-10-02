@@ -370,12 +370,40 @@
       if (e && Math.abs(src.scrollTop - e[0]) < 1 && Math.abs(src.scrollLeft - e[1]) < 1) {
         expected.delete(src);
       } else {
-        const [top, left] = [dst.scrollTop, dst.scrollLeft];
-        dst.scrollTop = mapLine(midLine(src), from) * LINE_HEIGHT + PANE_PAD - dst.clientHeight / 2;
-        dst.scrollLeft = src.scrollLeft;
-        if (dst.scrollTop !== top || dst.scrollLeft !== left) expected.set(dst, [dst.scrollTop, dst.scrollLeft]);
+        syncTo(src, dst, from);
       }
       scheduleDraw();
+    }
+    function syncTo(src, dst, from) {
+      const [top, left] = [dst.scrollTop, dst.scrollLeft];
+      dst.scrollTop = mapLine(midLine(src), from) * LINE_HEIGHT + PANE_PAD - dst.clientHeight / 2;
+      dst.scrollLeft = src.scrollLeft;
+      if (dst.scrollTop !== top || dst.scrollLeft !== left) expected.set(dst, [dst.scrollTop, dst.scrollLeft]);
+    }
+
+    // Native wheel scrolling runs on the compositor and paints the panes a frame ahead of the canvas,
+    // so scroll both panes and redraw in the same frame on the main thread instead.
+    let wheel = null;
+    function onWheel(e, src, dst, from) {
+      e.preventDefault();
+      const k = e.deltaMode === 1 ? LINE_HEIGHT : e.deltaMode === 2 ? src.clientHeight : 1;
+      if (!wheel) {
+        wheel = { src, dst, from, dx: 0, dy: 0 };
+        requestAnimationFrame(applyWheel);
+      }
+      wheel.dx += e.deltaX * k;
+      wheel.dy += e.deltaY * k;
+    }
+    function applyWheel() {
+      const { src, dst, from, dx, dy } = wheel;
+      wheel = null;
+      const [top, left] = [src.scrollTop, src.scrollLeft];
+      src.scrollTop += dy;
+      src.scrollLeft += dx;
+      if (src.scrollTop !== top || src.scrollLeft !== left) expected.set(src, [src.scrollTop, src.scrollLeft]);
+      syncTo(src, dst, from);
+      drawConnections();
+      drawRulerViewports();
     }
 
     // Both panes fire scroll events per user scroll; draw once per frame.
@@ -406,19 +434,8 @@
     rightRuler.addEventListener('pointermove', (e) => {
       if (e.buttons & 1) jumpTo(e, rightRuler, rightPane);
     });
-    leftRuler.addEventListener('wheel', (e) => { 
-      leftPane.scrollTop += e.deltaY; 
-    }, { passive: true });
-    rightRuler.addEventListener('wheel', (e) => { 
-      rightPane.scrollTop += e.deltaY; 
-    }, { passive: true });
-    // overflow-y:hidden still accepts scrollTop, but the wheel no longer scrolls it.
-    // TODO: inefficient
-    // leftPane.addEventListener('wheel', (e) => {
-    //   if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-    //   e.preventDefault();
-    //   leftPane.scrollTop += e.deltaY;
-    // }, { passive: false });
+    for (const el of [leftPane, leftRuler]) el.addEventListener('wheel', e => onWheel(e, leftPane, rightPane, 0), { passive: false });
+    for (const el of [rightPane, rightRuler]) el.addEventListener('wheel', e => onWheel(e, rightPane, leftPane, 1), { passive: false });
 
     window.addEventListener('resize', resizeCanvas);
     setTimeout(resizeCanvas, 100);
