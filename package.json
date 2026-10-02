@@ -2,7 +2,7 @@
   "name": "fluid-diff",
   "displayName": "fluid-diff",
   "description": "Fluid gap-free side-by-side diff viewer (Beyond Compare and Meld Style).",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "fluid-diff",
   "icon": "images/icon.png",
   "engines": {
@@ -37,13 +37,14 @@
       {
         "command": "fluid-diff.fromDiffEditor",
         "title": "Fluid Diff: From Diff Editor",
+        "icon": "$(diff)"
       }
     ],
     "menus": {
       "editor/title": [
         {
           "command": "fluid-diff.fluidDiffGit",
-          "when": "editorTextFocus",
+          "when": "editorTextFocus && !isInDiffEditor",
           "group": "3_compare"
         },
         { 

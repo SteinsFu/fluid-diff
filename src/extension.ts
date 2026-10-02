@@ -221,6 +221,16 @@ async function syntaxColoredLines(text: string, lang: string, theme: string): Pr
         theme = 'dark-plus';
     }
     const shiki = await import('shiki');
+    // VS Code languageIds that differ from shiki's names
+    lang = ({
+        typescriptreact: 'tsx',
+        javascriptreact: 'jsx',
+        'cuda-cpp': 'cpp',
+        dockercompose: 'yaml',
+        restructuredtext: 'rst',
+        juliamarkdown: 'markdown',
+        snippets: 'jsonc',
+    } as Record<string, string>)[lang] ?? lang;
     const safeLang = lang in shiki.bundledLanguages ? lang as keyof typeof shiki.bundledLanguages : 'text';
     const { tokens, fg } = await shiki.codeToTokens(text, { 
             lang: safeLang, 
