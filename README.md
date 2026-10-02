@@ -4,7 +4,7 @@
 
 # Fluid Diff
 
-**Side-by-side diff viewer for VS Code, in the style of Meld and Beyond Compare.**
+**Side-by-side diff viewer for VS Code, in the style of Meld and SmartGit.**
 
 Aligned panes · Word-level highlights · Syntax coloring
 
@@ -44,6 +44,19 @@ Aligned panes · Word-level highlights · Syntax coloring
 | Explorer, one file | Right-click a file and click **Fluid Diff: Git** |
 | Explorer, two files | Select exactly two files, right-click, and click **Fluid Diff: Compare Selected** (`fluid-diff.fluidDiffSelected`) |
 
+## Themes
+
+Run **Fluid Diff: Select Theme** from the Command Palette, or set `fluid-diff.theme` in Settings.
+
+| Theme | Look |
+| --- | --- |
+| `Auto` (default) | Light when VS Code uses a light or high-contrast light theme, Dark otherwise |
+| `Light` | Light background, VS Code Light+ syntax colors |
+| `Dark` | Dark background, VS Code Dark+ syntax colors |
+| `Dracula` | Dracula palette, with comments brightened for readability |
+
+The theme applies to diff panels opened after the change.
+
 ## Features
 
 - **Aligned panes.** Inserted or deleted lines never push the two sides out of step.
@@ -52,6 +65,7 @@ Aligned panes · Word-level highlights · Syntax coloring
 - **Syntax coloring.** Each pane uses the language of its own file.
 - **Overview scrollbar rulers.** A ruler beside each pane maps that whole file. Green marks inserts, red marks deletes, and yellow marks replacements. A translucent box shows the visible window. Click a ruler to jump that pane to the clicked spot.
 - **Compare any two selected files.** Pick two files in the Explorer and open them side by side. This command reads the two files directly.
+- **Themes.** Auto, Light, Dark, and Dracula. Auto follows the VS Code color theme.
 
 ## Requirements
 
@@ -73,7 +87,14 @@ These messages come from **Fluid Diff: Git**. If a check fails, the panel stays 
 - [x] Compare the active file with its `HEAD` version
 - [x] Compare any two selected files
 - [x] Overview scrollbar ruler
-- [ ] Light Theme
+- [x] Themes: Auto, Light, Dark, Dracula
+- [ ] Open changes from git graph
+
+## Limits
+
+- A gap bigger than 25M cells (about 5000×5000 lines) with no unique line inside becomes one replace chunk.
+- Edit-similarity scoring only runs on gaps up to 1M cells.
+- A chunk larger than 4M token pairs gets background color only, no word marks.
 
 ## Development
 

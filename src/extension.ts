@@ -3,7 +3,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { diffLines, diffWords, pairLines, Chunk, WordMark } from './diff';
+import { diffLines, diffBlock, Chunk, WordMark } from './diff';
 
 // Subset of the built-in Git extension API we use; full typings live in vscode's extensions/git/src/api/git.d.ts.
 interface GitExtension {
@@ -60,14 +60,16 @@ export function activate(context: vscode.ExtensionContext) {
         );
 
         // 4. Set the HTML content of the webview panel
+        const theme = getTheme();
         const lang = activeEditor.document.languageId;
-        panel.webview.html = await getWebviewContent(context, previousText, currentText, lang, lang);
+        panel.webview.html = await getWebviewContent(context, previousText, currentText, lang, lang, theme);
 
         // Mock test data
         // panel.webview.html = await getWebviewContent(context,
         //     fs.readFileSync(path.join(context.extensionPath, 'examples', 'example1_old.py'), 'utf8'),
         //     fs.readFileSync(path.join(context.extensionPath, 'examples', 'example1_new.py'), 'utf8'),
-        //     'python', 'python'
+        //     'python', 'python', 
+        //     theme
         // );
     });
 
@@ -93,10 +95,21 @@ export function activate(context: vscode.ExtensionContext) {
         );
 
         // 3. Set the HTML content of the webview panel
-        panel.webview.html = await getWebviewContent(context, doc1.getText(), doc2.getText(), lang1, lang2);
+        const theme = getTheme();
+        panel.webview.html = await getWebviewContent(context, doc1.getText(), doc2.getText(), lang1, lang2, theme);
     });
 
-    context.subscriptions.push(fluidDiffGitDisposable, fluidDiffSelectedDisposable);
+    // Command 3: Select Theme
+    const selectThemeDisposable = vscode.commands.registerCommand('fluid-diff.selectTheme', async () => {
+        const theme = await vscode.window.showQuickPick(THEMES, {
+            placeHolder: 'Select a theme',
+        });
+        if (theme) {
+            vscode.workspace.getConfiguration('fluid-diff').update('theme', theme, vscode.ConfigurationTarget.Global);
+        }
+    });
+
+    context.subscriptions.push(fluidDiffGitDisposable, fluidDiffSelectedDisposable, selectThemeDisposable);
 }
 
 // This method is called when your extension is deactivated
@@ -104,47 +117,34 @@ export function deactivate() {}
 
 
 // helper function to generate the HTML content for the webview
-async function getWebviewContent(context: vscode.ExtensionContext, textA: string, textB: string, langA: string, langB: string): Promise<string> {
+async function getWebviewContent(context: vscode.ExtensionContext, textA: string, textB: string, langA: string, langB: string, theme: string): Promise<string> {
     const linesA = textA.split(/\r?\n/);
     const linesB = textB.split(/\r?\n/);
     const chunks = diffLines(linesA, linesB);
 
     // syntax-color the lines
     const [coloreToksA, coloreToksB] = await Promise.all([
-        syntaxColoredLines(linesA.join('\n'), langA),
-        syntaxColoredLines(linesB.join('\n'), langB),
+        syntaxColoredLines(linesA.join('\n'), langA, theme),
+        syntaxColoredLines(linesB.join('\n'), langB, theme),
     ])
 
-    // Word highlights only for similar line pairs;
-    // Only for replace chunks (pure insert/delete chunks are not highlighted cuz background color is enough to distinguish)
+    // Word highlights only for replace chunks (pure insert/delete chunks are not highlighted cuz background color is enough to distinguish)
     const words = { a: new Map<number, WordMark[]>(), b: new Map<number, WordMark[]>() };
     for (const c of chunks) {
         if (c.tag !== 'replace') { continue; }
-        for (const [i, j] of pairLines(linesA.slice(c.a0, c.a1), linesB.slice(c.b0, c.b1))) {
-            const w = diffWords(linesA[c.a0 + i], linesB[c.b0 + j]);
-            words.a.set(c.a0 + i, w.a);
-            words.b.set(c.b0 + j, w.b);
-        }
-        // handle left-over lines that are not paired
-        for (let i = c.a0; i < c.a1; i++) { 
-            if (!words.a.has(i)) { 
-                words.a.set(i, [[0, linesA[i].length, 'word-delete']]); 
-            } 
-        }
-        for (let j = c.b0; j < c.b1; j++) { 
-            if (!words.b.has(j)) { 
-                words.b.set(j, [[0, linesB[j].length, 'word-insert']]); 
-            } 
-        }
+        const w = diffBlock(linesA.slice(c.a0, c.a1), linesB.slice(c.b0, c.b1));
+        w.a.forEach((marks, i) => words.a.set(c.a0 + i, marks));
+        w.b.forEach((marks, j) => words.b.set(c.b0 + j, marks));
     }
 
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
     // Function replacers: file text may contain `$&`-style patterns that string replacers expand.
     const htmlContent = fs.readFileSync(htmlPath, 'utf8').replace(
-        /\{\{(textA|textB|chunks)\}\}/g,
+        /\{\{(textA|textB|chunks|theme)\}\}/g,
         (token) => token === '{{textA}}' ? renderLines(linesA, chunks, 'a', words.a, coloreToksA)
             : token === '{{textB}}' ? renderLines(linesB, chunks, 'b', words.b, coloreToksB)
-            : JSON.stringify(chunks)
+            : token === '{{chunks}}' ? JSON.stringify(chunks)
+            : theme
     );
     return htmlContent;
 }
@@ -193,10 +193,21 @@ function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: M
 
 type ColoredTok = { start: number; end: number; color?: string }
 
-async function syntaxColoredLines(text: string, lang: string): Promise<ColoredTok[][]> {
+async function syntaxColoredLines(text: string, lang: string, theme: string): Promise<ColoredTok[][]> {
+    if (theme === 'light') {
+        theme = 'light-plus';
+    } else if (theme === 'dark') {
+        theme = 'dark-plus';
+    }
     const shiki = await import('shiki');
     const safeLang = lang in shiki.bundledLanguages ? lang as keyof typeof shiki.bundledLanguages : 'text';
-    const { tokens, fg } = await shiki.codeToTokens(text, { lang: safeLang, theme: 'dark-plus' });
+    const { tokens, fg } = await shiki.codeToTokens(text, { 
+            lang: safeLang, 
+            theme: theme,
+                colorReplacements: theme === 'dracula'
+                ? { '#6272a4': '#8E99CB' }  // dracula comment color is too dark, so we replace it with a lighter color
+                : undefined,
+        });
     return tokens.map(line => {
         const out: ColoredTok[] = [];
         let pos = 0;
@@ -214,4 +225,22 @@ async function syntaxColoredLines(text: string, lang: string): Promise<ColoredTo
         }
         return out;
     });
+}
+
+
+// UI Theme
+const THEMES = ['Auto', 'Light', 'Dark', 'Dracula'] as const;
+
+function getTheme(): string {
+    const config = vscode.workspace.getConfiguration('fluid-diff').get<string>('theme', 'Auto');
+    if (config === 'Auto') {
+        const vscodeTheme = vscode.window.activeColorTheme.kind;
+        if (vscodeTheme === vscode.ColorThemeKind.Light || vscodeTheme === vscode.ColorThemeKind.HighContrastLight)
+            return 'light';
+        return 'dark';
+    }
+    if ((THEMES as readonly string[]).includes(config)) {
+        return config.toLowerCase();
+    }
+    return 'dark';
 }
