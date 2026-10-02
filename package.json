@@ -29,6 +29,10 @@
       {
         "command": "fluid-diff.fluidDiffSelected",
         "title": "Fluid Diff: Compare Selected"
+      },
+      {
+        "command": "fluid-diff.selectTheme",
+        "title": "Fluid Diff: Select Theme"
       }
     ],
     "menus": {
@@ -51,6 +55,17 @@
           "group": "3_compare"
         }
       ]
+    },
+    "configuration": {
+      "title": "Fluid Diff",
+      "properties": {
+        "fluid-diff.theme": {
+          "type": "string",
+          "enum": ["Auto", "Light", "Dark", "Dracula"],
+          "default": "Auto",
+          "description": "Color theme for the Fluid Diff view. Auto chooses light or dark theme based on the VS Code theme.."
+        }
+      }
     }
   },
   "scripts": {

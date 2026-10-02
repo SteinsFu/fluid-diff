@@ -1,15 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{{theme}}">
 
 <head>
   <style>
+    :root {
+      --bg: #1e1e1e;
+      --fg: #d4d4d4;
+      --chrome: #252526;
+      --muted: #858585;
+      --viewport: rgba(255, 255, 255, 0.5);
+      --viewport-border: #ffffff;
+      --gap: rgba(200, 200, 200, 0.8);
+      --insert: 140, 200, 140;
+      --delete: 240, 140, 140;
+      --replace: 240, 215, 140;
+      --ruler-mark-insert: rgba(98, 227, 104, 0.7);
+      --ruler-mark-delete: rgba(240, 90, 90, 0.7);
+      --ruler-mark-replace: rgba(255, 207, 75, 0.7);
+      --word-insert: rgba(80, 200, 80, 0.2);
+      --word-delete: rgba(255, 135, 135, 0.2);
+      --word-replace: rgba(255, 210, 86, 0.2);
+      --word-insert-underline: rgba(80, 200, 80, 0.5);
+      --word-delete-underline: rgba(240, 90, 90, 0.5);
+      --word-replace-underline: rgba(224, 184, 74, 0.5);
+      --word-gap-insert: rgb(80, 200, 80);
+      --word-gap-delete: rgb(240, 90, 90);
+      --gap-before: rgba(200, 200, 200, 0.8);
+      --gap-after: rgba(200, 200, 200, 0.8);
+      --gutter: #252526;
+    }
+    html[data-theme="light"] {
+      --bg: #ffffff;
+      --fg: #333333;
+      --chrome: #f3f3f3;
+      --muted: #6e6e6e;
+      --viewport: rgba(0, 0, 0, 0.12);
+      --viewport-border: #333333;
+      --gap: rgba(80, 80, 80, 0.45);
+      --insert: 30, 140, 60;
+      --delete: 200, 40, 40;
+      --replace: 160, 120, 0;
+      --ruler-mark-insert: rgba(30, 140, 60, 0.7);
+      --ruler-mark-delete: rgba(200, 40, 40, 0.7);
+      --ruler-mark-replace: rgba(190, 140, 0, 0.7);
+      --word-insert: rgba(30, 140, 60, 0.2);
+      --word-delete: rgba(200, 40, 40, 0.2);
+      --word-replace: rgba(190, 140, 0, 0.2);
+      --word-insert-underline: rgba(30, 140, 60, 0.6);
+      --word-delete-underline: rgba(200, 40, 40, 0.6);
+      --word-replace-underline: rgba(160, 120, 0, 0.6);
+      --word-gap-insert: rgb(30, 140, 60);
+      --word-gap-delete: rgb(200, 40, 40);
+      --gap-before: rgba(80, 80, 80, 0.45);
+      --gap-after: rgba(80, 80, 80, 0.45);
+      --gutter: #f3f3f3;
+    }
+    html[data-theme="dracula"] {
+      --bg: #282a36;
+      --fg: #f8f8f2;
+      --chrome: #21222c;
+      --muted: #6272a4;
+      --viewport: rgba(68, 71, 90, 0.6);
+      --viewport-border: #bd93f9;
+      --gap: rgba(98, 114, 164, 0.9);
+      --insert: 80, 250, 123;
+      --delete: 255, 85, 85;
+      --replace: 241, 250, 140;
+      --ruler-mark-insert: rgba(80, 250, 123, 0.7);
+      --ruler-mark-delete: rgba(255, 85, 85, 0.7);
+      --ruler-mark-replace: rgba(241, 250, 140, 0.7);
+      --word-insert: rgba(80, 250, 123, 0.2);
+      --word-delete: rgba(255, 85, 85, 0.2);
+      --word-replace: rgba(241, 250, 140, 0.2);
+      --word-insert-underline: rgba(80, 250, 123, 0.6);
+      --word-delete-underline: rgba(255, 85, 85, 0.6);
+      --word-replace-underline: rgba(241, 250, 140, 0.6);
+      --word-gap-insert: rgb(80, 250, 123);
+      --word-gap-delete: rgb(255, 85, 85);
+      --gap-before: rgba(98, 114, 164, 0.9);
+      --gap-after: rgba(98, 114, 164, 0.9);
+      --gutter: #21222c;
+    }
+
     body {
       display: flex;
       font-family: monospace;
       margin: 0;
       padding: 0;
-      background: #1e1e1e;
-      color: #d4d4d4;
+      background: var(--bg);
+      color: var(--fg);
       height: 100vh;
       overflow: hidden;
     }
@@ -33,28 +112,28 @@
     #leftRuler {
       flex: 0 0 10px; 
       position: relative; 
-      background: #252526;
+      background: var(--chrome);
     }
     #rightRuler {
       flex: 0 0 10px; 
       position: relative; 
-      background: #252526;
+      background: var(--chrome);
     }
     /* Viewport follows current window scroll position */
     #leftRulerViewport {
       position: absolute;
       left: 0;
       right: 0;
-      background: rgba(255, 255, 255, 0.5);
-      border: 1px solid #ffffff;
+      background: var(--viewport);
+      border: 1px solid var(--viewport-border);
       z-index: 99;
     }
     #rightRulerViewport {
       position: absolute;
       left: 0;
       right: 0;
-      background: rgba(255, 255, 255, 0.5);
-      border: 1px solid #ffffff;
+      background: var(--viewport);
+      border: 1px solid var(--viewport-border);
       z-index: 99;
     }
     .ruler-mark {
@@ -63,9 +142,9 @@
       width: 100%;
       min-height: 2px;
     }
-    .ruler-mark-insert { color: rgba(98, 227, 104, 0.7); }
-    .ruler-mark-delete { color: rgba(240, 90, 90, 0.7); }
-    .ruler-mark-replace { color: rgba(255, 207, 75, 0.7); }
+    .ruler-mark-insert { color: var(--ruler-mark-insert); }
+    .ruler-mark-delete { color: var(--ruler-mark-delete); }
+    .ruler-mark-replace { color: var(--ruler-mark-replace); }
     .ruler-mark:hover {
       filter: brightness(1.4);
       box-shadow: 0 0 0 2px currentColor;
@@ -90,14 +169,14 @@
       width: 5ch;
       margin-right: 1ch;
       text-align: right;
-      color: #858585;
+      color: var(--muted);
       user-select: none;
     }
 
     /* The chunk backgrounds */
-    .chunk-insert { background: rgba(140, 200, 140, 0.2); }
-    .chunk-delete { background: rgba(240, 140, 140, 0.2); }
-    .chunk-replace { background: rgba(240, 215, 140, 0.2); }
+    .chunk-insert { background: rgba(var(--insert), 0.2); }
+    .chunk-delete { background: rgba(var(--delete), 0.2); }
+    .chunk-replace { background: rgba(var(--replace), 0.2); }
     
     /* The word highlights */
     .word-insert, .word-delete, .word-replace {
@@ -107,18 +186,18 @@
       vertical-align: top;
     }
     .word-insert {
-      background: rgba(80, 200, 80, 0.2);
-      box-shadow: inset 0 -1px 0 rgba(80, 200, 80, 0.5);
+      background: var(--word-insert);
+      box-shadow: inset 0 -1px 0 var(--word-insert-underline);
       border-radius: 2px;
     }
     .word-delete {
-      background: rgba(255, 135, 135, 0.2);
-      box-shadow: inset 0 -1px 0 rgba(240, 90, 90, 0.5);
+      background: var(--word-delete);
+      box-shadow: inset 0 -1px 0 var(--word-delete-underline);
       border-radius: 2px;
     }
     .word-replace {
-      background: rgba(255, 210, 86, 0.2);
-      box-shadow: inset 0 -1px 0 rgba(224, 184, 74, 0.5);
+      background: var(--word-replace);
+      box-shadow: inset 0 -1px 0 var(--word-replace-underline);
       border-radius: 2px;
     }
 
@@ -130,8 +209,8 @@
       vertical-align: top;
       position: relative;
     }
-    .word-gap-insert { box-shadow: 0 0 0 1px rgb(80, 200, 80); }
-    .word-gap-delete { box-shadow: 0 0 0 1px rgb(240, 90, 90); }
+    .word-gap-insert { box-shadow: 0 0 0 1px var(--word-gap-insert); }
+    .word-gap-delete { box-shadow: 0 0 0 1px var(--word-gap-delete); }
 
     /* The gap indicators arrow */
     .word-gap-insert::before, .word-gap-delete::before {
@@ -141,17 +220,17 @@
       left: -4px;
       border: 4px solid transparent;
     }
-    .word-gap-insert::before { border-top-color: rgb(80, 200, 80); }
-    .word-gap-delete::before { border-top-color: rgb(240, 90, 90); }
+    .word-gap-insert::before { border-top-color: var(--word-gap-insert); }
+    .word-gap-delete::before { border-top-color: var(--word-gap-delete); }
 
-    .gap-before { box-shadow: inset 0 1px 0 rgba(200, 200, 200, 0.8); }
-    .gap-after { box-shadow: inset 0 -1px 0 rgba(200, 200, 200, 0.8); }
+    .gap-before { box-shadow: inset 0 1px 0 var(--gap-before); }
+    .gap-after { box-shadow: inset 0 -1px 0 var(--gap-after); }
 
     /* The fluid gutter holding our connecting curves */
     .gutter {
       flex: 0 0 60px;
       width: 60px;
-      background: #252526;
+      background: var(--gutter);
       position: relative;
     }
 
@@ -183,11 +262,8 @@
     const chunks = JSON.parse('{{chunks}}');
     const LINE_HEIGHT = 20;
     const PANE_PAD = 10;
-    const COLORS = {
-      insert: [140, 200, 140],
-      delete: [240, 140, 140],
-      replace: [240, 215, 140],
-    };
+    const rootStyle = getComputedStyle(document.documentElement);
+    const COLORS = Object.fromEntries(['insert', 'delete', 'replace'].map(t => [t, rootStyle.getPropertyValue(`--${t}`).trim()]));
 
     // Draw ruler marks & viewports
     drawRulerMarks();
@@ -250,17 +326,23 @@
         const ly0 = yOf(leftPane, c.a0), ly1 = yOf(leftPane, c.a1);
         const ry0 = yOf(rightPane, c.b0), ry1 = yOf(rightPane, c.b1);
         if (Math.max(ly1, ry1) < 0 || Math.min(ly0, ry0) > h) continue;
-        const [r, g, b] = COLORS[c.tag];
+        const rgb = COLORS[c.tag];
         ctx.beginPath();
         ctx.moveTo(0, ly0);
         ctx.bezierCurveTo(w / 2, ly0, w / 2, ry0, w, ry0);
         ctx.lineTo(w, ry1);
         ctx.bezierCurveTo(w / 2, ry1, w / 2, ly1, 0, ly1);
         ctx.closePath();
-        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.3)`;
-        ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
-        ctx.lineWidth = 1;
+        ctx.fillStyle = `rgba(${rgb}, 0.3)`;
         ctx.fill();
+        // Stroke only the top and bottom curves. The left and right edges stay unstroked.
+        ctx.beginPath();
+        ctx.moveTo(0, ly0);
+        ctx.bezierCurveTo(w / 2, ly0, w / 2, ry0, w, ry0);
+        ctx.moveTo(0, ly1);
+        ctx.bezierCurveTo(w / 2, ly1, w / 2, ry1, w, ry1);
+        ctx.strokeStyle = `rgb(${rgb})`;
+        ctx.lineWidth = 1;
         ctx.stroke();
       }
     }

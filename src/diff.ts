@@ -51,15 +51,21 @@ function uniqueAnchors(a: string[], b: string[], a0: number, a1: number, b0: num
     const seen = new Map<string, [ca: number, cb: number, i: number, j: number]>();
     for (let i = a0; i < a1; i++) {
         const e = seen.get(a[i]);
-        if (e) { e[0]++; } else { seen.set(a[i], [1, 0, i, -1]); }
+        if (e) { e[0]++; } else { seen.set(a[i], [1, 0, i, -1]); }  // 1: a count, 0: b count, i: a index, -1: b index
     }
     for (let j = b0; j < b1; j++) {
         const e = seen.get(b[j]);
         if (e) { e[1]++; e[3] = j; }
     }
     // Map keeps first-seen order, so candidates are sorted by i; take the longest increasing run of j.
+    // e.g.
+    // Text	     Record	         Kept as an anchor?
+    // "x = 1"   [1, 0, 0, -1]   no, it's not in b
+    // ""        [2, 1, 1, 0]    no, it appears twice in a (and has no word)
+    // "return"  [1, 1, 2, 2]    yes, anchor (2, 2)
     const cands = [...seen.values()].filter(e => e[0] === 1 && e[1] === 1 && HAS_WORD.test(a[e[2]]));
     const tails: number[] = [], prev: number[] = [];
+    // O(n log n) patience sort
     cands.forEach((e, k) => {
         let lo = 0, hi = tails.length;
         while (lo < hi) {
