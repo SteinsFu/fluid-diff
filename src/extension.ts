@@ -175,6 +175,7 @@ function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: M
     for (const c of chunks) {
         const [s, e] = side === 'a' ? [c.a0, c.a1] : [c.b0, c.b1];
         for (let i = s; i < e; i++) { cls[i] += ` chunk-${c.tag}`; }
+        if (s < e) { cls[s] += ' chunk-start'; cls[e - 1] += ' chunk-end'; }
         if (s === e) {
             if (s < lines.length) { cls[s] += ' gap-before'; } else if (s > 0) { cls[s - 1] += ' gap-after'; }
         }
@@ -215,7 +216,17 @@ function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: M
 type ColoredTok = { start: number; end: number; color?: string }
 
 async function syntaxColoredLines(text: string, lang: string, theme: string): Promise<ColoredTok[][]> {
-    if (theme === 'light') {
+    let colorReplacements: Record<string, string> | undefined;
+    if (theme === 'dracula') {
+        colorReplacements = { '#6272a4': '#8E99CB' };  // dracula comment color is too dark, so we replace it with a lighter color
+    } else if (theme === 'light') {
+        // better color palette on top of Light+: navy keywords, black identifiers, green strings, gray comments
+        colorReplacements = {
+            '#0000ff': '#000080', '#af00db': '#000080',
+            '#001080': '#000000', '#0070c1': '#000000', '#795e26': '#000000',
+            '#267f99': '#20999d', '#a31515': '#067d17', '#098658': '#1750eb',
+            '#008000': '#8c8c8c',
+        };
         theme = 'light-plus';
     } else if (theme === 'dark') {
         theme = 'dark-plus';
@@ -235,9 +246,7 @@ async function syntaxColoredLines(text: string, lang: string, theme: string): Pr
     const { tokens, fg } = await shiki.codeToTokens(text, { 
             lang: safeLang, 
             theme: theme,
-                colorReplacements: theme === 'dracula'
-                ? { '#6272a4': '#8E99CB' }  // dracula comment color is too dark, so we replace it with a lighter color
-                : undefined,
+            colorReplacements,
         });
     return tokens.map(line => {
         const out: ColoredTok[] = [];
