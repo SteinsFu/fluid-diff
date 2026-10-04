@@ -37,7 +37,7 @@
       {
         "command": "fluid-diff.fromDiffEditor",
         "title": "Fluid Diff: From Diff Editor",
-        "icon": "$(diff)"
+        "icon": "images/icon.svg"
       }
     ],
     "menus": {

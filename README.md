@@ -104,6 +104,7 @@ These messages come from **Fluid Diff: Git**. If a check fails, the panel stays 
 - [x] Themes: Auto, Light, Dark, Dracula
 - [x] Reopen a built-in single-file diff
 - [ ] Open changes from git graph
+- [ ] Diffing in Markdown preview
 
 ## Limits
 

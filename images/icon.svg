@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="flow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#BAE6FD"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+    <linearGradient id="pane" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7DD3FC"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="3"/>
+  <path d="M100 68 C132 68 120 164 156 164 L156 196 C120 196 132 100 100 100 Z" fill="url(#flow)" opacity="0.9"/>
+  <rect x="40" y="48" width="64" height="160" rx="12" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="3"/>
+  <g stroke="#CBD5E1" stroke-width="6" stroke-linecap="round">
+    <line x1="54" y1="122" x2="90" y2="122"/>
+    <line x1="54" y1="142" x2="90" y2="142"/>
+    <line x1="54" y1="162" x2="84" y2="162"/>
+    <line x1="54" y1="182" x2="90" y2="182"/>
+  </g>
+  <g stroke="#38BDF8" stroke-width="6" stroke-linecap="round">
+    <line x1="54" y1="72" x2="90" y2="72"/>
+    <line x1="54" y1="92" x2="80" y2="92"/>
+  </g>
+  <rect x="152" y="48" width="64" height="160" rx="12" fill="url(#pane)"/>
+  <g stroke="#FFFFFF" stroke-opacity="0.75" stroke-width="6" stroke-linecap="round">
+    <line x1="166" y1="72" x2="202" y2="72"/>
+    <line x1="166" y1="92" x2="196" y2="92"/>
+    <line x1="166" y1="112" x2="202" y2="112"/>
+    <line x1="166" y1="132" x2="190" y2="132"/>
+  </g>
+  <g stroke="#FFFFFF" stroke-width="6" stroke-linecap="round">
+    <line x1="166" y1="172" x2="202" y2="172"/>
+    <line x1="166" y1="188" x2="192" y2="188"/>
+  </g>
+</svg>
