@@ -1,8 +1,4 @@
-"""In-process job queue.
-
-Jobs run in priority order. Failed jobs are retried with
-exponential backoff until they reach their retry limit.
-"""
+"""Lightweight background job queue with retries and priorities."""
 
 import heapq
 import itertools
@@ -38,16 +34,6 @@ class Job:
     status: JobStatus = field(default=JobStatus.PENDING, compare=False)
     result: Any = field(default=None, compare=False)
     error: Optional[str] = field(default=None, compare=False)
-    created_at: float = field(default_factory=time.time, compare=False)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "name": self.name,
-            "priority": self.priority,
-            "status": self.status.value,
-            "attempts": self.attempts,
-            "error": self.error,
-        }
 
 
 class JobQueue:
@@ -69,6 +55,9 @@ class JobQueue:
         logger.info("Submitted job %s (priority=%d)", name, priority)
         return job
 
+    def __len__(self) -> int:
+        return len(self._heap)
+
     def _run_once(self, job: Job) -> bool:
         job.status = JobStatus.RUNNING
         job.attempts += 1
@@ -88,14 +77,12 @@ class JobQueue:
             return None
 
         job = heapq.heappop(self._heap)
-        for attempt in range(1, job.max_retries + 2):
-            if self._run_once(job):
-                break
-            if attempt > job.max_retries:
+        while not self._run_once(job):
+            if job.attempts > job.max_retries:
                 job.status = JobStatus.FAILED
-                logger.error("Job %s exhausted %d retries", job.name, job.max_retries)
+                logger.error("Job %s gave up after %d attempts", job.name, job.attempts)
                 break
-            time.sleep(min(self.backoff_seconds * 2 ** (attempt - 1), 30.0))
+            time.sleep(self.backoff_seconds * job.attempts)
 
         return job
 
@@ -105,22 +92,14 @@ class JobQueue:
             finished.append(self.run_next())
         return finished
 
+    def get(self, name: str) -> Optional[Job]:
+        return self._history.get(name)
+
     def summary(self) -> Dict[str, int]:
         counts = {status.value: 0 for status in JobStatus}
         for job in self._history.values():
             counts[job.status.value] += 1
         return counts
-
-    def cancel(self, name: str) -> bool:
-        job = self._history.get(name)
-        if job is None or job not in self._heap:
-            return False
-        self._heap.remove(job)
-        heapq.heapify(self._heap)
-        job.status = JobStatus.FAILED
-        job.error = "cancelled"
-        logger.info("Cancelled job %s", name)
-        return True
 
 
 # ---- demo tasks ----
@@ -149,11 +128,9 @@ def main():
 
     queue = JobQueue(backoff_seconds=0.1)
     queue.submit("welcome", send_welcome_email, "alice@example.com", priority=1)
-    queue.submit("thumbnail", resize_image, "cat.png", 256, 256, priority=3)
-    queue.submit("sync", flaky_sync, priority=5, max_retries=4)
+    queue.submit("thumbnail", resize_image, "cat.png", 128, 128)
+    queue.submit("sync", flaky_sync, priority=5)
     queue.submit("bad-email", send_welcome_email, "not-an-email", max_retries=1)
-    queue.submit("report", resize_image, "report.pdf", 0, 0)
-    queue.cancel("report")
 
     for job in queue.run_all():
         print(f"{job.name:<10} {job.status.value:<10} {job.result or job.error}")
