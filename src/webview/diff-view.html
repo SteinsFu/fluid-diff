@@ -122,6 +122,7 @@
 
     body {
       display: flex;
+      flex-direction: column;
       font-family: monospace;
       margin: 0;
       padding: 0;
@@ -129,6 +130,33 @@
       color: var(--fg);
       height: 100vh;
       overflow: hidden;
+    }
+
+    .main {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* File path bars, column widths mirror .main (ruler, pane, gutter, pane, ruler) */
+    .paths {
+      display: flex;
+      background: var(--chrome);
+      border-bottom: 1px solid var(--gap);
+    }
+    .path {
+      flex: 0 0 calc(50% - 30px - 10px);
+      min-width: 0;
+      padding: 3px 1ch;
+      box-sizing: border-box;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      /* rtl puts the ellipsis on the left so the file name stays visible; text-align keeps short paths left-aligned */
+      direction: rtl;
+      text-align: left;
     }
 
     .pane {
@@ -296,13 +324,22 @@
 </head>
 
 <body>
-  <div id="leftRuler"><div id="leftRulerViewport"></div></div>
-  <div class="pane" id="leftPane"><div class="lines">{{textA}}</div></div>
-  <div class="gutter">
-    <canvas id="canvas"></canvas>
+  <div class="paths">
+    <div style="flex: 0 0 10px"></div>
+    <!-- &lrm; on both ends keeps leading "/" and trailing ")" from jumping sides under rtl -->
+    <div class="path" title="{{pathA}}">&lrm;{{pathA}}&lrm;</div>
+    <div style="flex: 0 0 60px"></div>
+    <div class="path" title="{{pathB}}">&lrm;{{pathB}}&lrm;</div>
   </div>
-  <div class="pane" id="rightPane"><div class="lines">{{textB}}</div></div>
-  <div id="rightRuler"><div id="rightRulerViewport"></div></div>
+  <div class="main">
+    <div id="leftRuler"><div id="leftRulerViewport"></div></div>
+    <div class="pane" id="leftPane"><div class="lines">{{textA}}</div></div>
+    <div class="gutter">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="pane" id="rightPane"><div class="lines">{{textB}}</div></div>
+    <div id="rightRuler"><div id="rightRulerViewport"></div></div>
+  </div>
 
   <script>
     const leftPane = document.getElementById('leftPane');

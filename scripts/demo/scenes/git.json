@@ -1,0 +1,14 @@
+[
+  {"at": [900, 560]},
+  {"wait": 600},
+  {"zoom": [820, 110, 2.0]},
+  {"wait": 500},
+  {"keys": "cmd+shift+p"},
+  {"wait": 500},
+  {"type": "Fluid Diff: Git", "ms": 75},
+  {"wait": 800},
+  {"keys": "enter"},
+  {"wait": 300},
+  {"zoom": [820, 490, 1]},
+  {"wait": 2800}
+]

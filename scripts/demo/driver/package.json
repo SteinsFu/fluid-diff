@@ -1,0 +1,10 @@
+{
+  "name": "fluid-diff-demo-driver",
+  "displayName": "Fluid Diff demo driver",
+  "publisher": "fluid-diff",
+  "version": "0.0.1",
+  "private": true,
+  "engines": { "vscode": "^1.80.0" },
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js"
+}

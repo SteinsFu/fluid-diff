@@ -62,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
         // 4. Set the HTML content of the webview panel
         const theme = getTheme();
         const lang = activeEditor.document.languageId;
-        panel.webview.html = await getWebviewContent(context, previousText, currentText, lang, lang, theme);
+        panel.webview.html = await getWebviewContent(context, previousText, currentText, lang, lang, theme, `${fileName} (HEAD)`, fileName);
 
         // Mock test data
         // panel.webview.html = await getWebviewContent(context,
@@ -96,7 +96,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         // 3. Set the HTML content of the webview panel
         const theme = getTheme();
-        panel.webview.html = await getWebviewContent(context, doc1.getText(), doc2.getText(), lang1, lang2, theme);
+        panel.webview.html = await getWebviewContent(context, doc1.getText(), doc2.getText(), lang1, lang2, theme, doc1.fileName, doc2.fileName);
     });
 
     // Command 3: Select Theme
@@ -126,7 +126,7 @@ export function activate(context: vscode.ExtensionContext) {
                     enableScripts: true, // Crucial! allwo JS to run inside HTML webview
                 }
             );
-            panel.webview.html = await getWebviewContent(context, oldDoc.getText(), newDoc.getText(), lang1, lang2, theme);
+            panel.webview.html = await getWebviewContent(context, oldDoc.getText(), newDoc.getText(), lang1, lang2, theme, oldDoc.fileName, newDoc.fileName);
         }
     });
 
@@ -138,7 +138,7 @@ export function deactivate() {}
 
 
 // helper function to generate the HTML content for the webview
-async function getWebviewContent(context: vscode.ExtensionContext, textA: string, textB: string, langA: string, langB: string, theme: string): Promise<string> {
+async function getWebviewContent(context: vscode.ExtensionContext, textA: string, textB: string, langA: string, langB: string, theme: string, pathA: string, pathB: string): Promise<string> {
     const linesA = textA.split(/\r?\n/);
     const linesB = textB.split(/\r?\n/);
     const chunks = diffLines(linesA, linesB);
@@ -161,14 +161,18 @@ async function getWebviewContent(context: vscode.ExtensionContext, textA: string
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
     // Function replacers: file text may contain `$&`-style patterns that string replacers expand.
     const htmlContent = fs.readFileSync(htmlPath, 'utf8').replace(
-        /\{\{(textA|textB|chunks|theme)\}\}/g,
+        /\{\{(textA|textB|chunks|theme|pathA|pathB)\}\}/g,
         (token) => token === '{{textA}}' ? renderLines(linesA, chunks, 'a', words.a, coloreToksA)
             : token === '{{textB}}' ? renderLines(linesB, chunks, 'b', words.b, coloreToksB)
             : token === '{{chunks}}' ? JSON.stringify(chunks)
+            : token === '{{pathA}}' ? escape(pathA)
+            : token === '{{pathB}}' ? escape(pathB)
             : theme
     );
     return htmlContent;
 }
+
+const escape = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: Map<number, WordMark[]>, coloredToks: ColoredTok[][]): string {
     const cls: string[] = lines.map(() => 'line');
@@ -180,7 +184,6 @@ function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: M
             if (s < lines.length) { cls[s] += ' gap-before'; } else if (s > 0) { cls[s - 1] += ' gap-after'; }
         }
     }
-    const escape = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const renderText = (l: string, marks: WordMark[] = [], coloredToks: ColoredTok[] = []) => {
         // k is the index of the next coloredTok to paint
         let k = 0;  

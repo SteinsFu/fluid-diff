@@ -1,6 +1,10 @@
 .vscode/**
 .vscode-test/**
 src/**
+scripts/**
+images/**
+!images/icon.png
+!images/icon.svg
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md

@@ -8,7 +8,23 @@
 
 Aligned panes · Word-level highlights · Syntax coloring
 
+<img src="images/theme-dark.png" alt="Side-by-side Fluid Diff in VS Code" width="820">
+
 </div>
+
+## Preview
+
+<p align="center">
+  <img src="images/demo-preview.gif" alt="Scrolling through a Fluid Diff: both panes stay aligned" width="820">
+  <br>
+  <em>Scroll either pane and the other follows, with connectors linking each changed chunk.</em>
+</p>
+
+<p align="center">
+  <img src="images/demo-ruler.gif" alt="Hovering ruler marks enlarges them; clicking one jumps to that chunk" width="820">
+  <br>
+  <em>Hover a mark on the ruler to highlight its chunk, then click to jump to it.</em>
+</p>
 
 ---
 
@@ -24,6 +40,10 @@ Aligned panes · Word-level highlights · Syntax coloring
    | --- | --- |
    | File as committed in `HEAD` | Current editor buffer, unsaved edits included |
 
+<p align="center">
+  <img src="images/demo-git.gif" alt="Open the Command Palette, run Fluid Diff: Git, and read the diff" width="820">
+</p>
+
 ### Selected files
 
 1. In the Explorer, select exactly two files.
@@ -34,15 +54,23 @@ Aligned panes · Word-level highlights · Syntax coloring
    | --- | --- |
    | First file in the selection | Second file in the selection |
 
+<p align="center">
+  <img src="images/demo-compare.gif" alt="Select two files in the Explorer, right-click, and run Fluid Diff: Compare Selected" width="820">
+</p>
+
 ### From a diff editor
 
 1. Open a single-file diff in VS Code, for example from the Source Control view or the Timeline view.
-2. Click **Fluid Diff: From Diff Editor** in the editor title bar.
+2. Click the **Fluid Diff: From Diff Editor** icon in the editor title bar. If you don't see the icon, click **...** in the editor title bar and pick **Fluid Diff: From Diff Editor** from the menu.
 3. Read the diff:
 
    | Left pane | Right pane |
    | --- | --- |
    | Original side of the diff | Modified side of the diff |
+
+<p align="center">
+  <img src="images/demo-timeline.gif" alt="Open a diff from the Timeline view, then click the Fluid Diff icon in the editor title bar" width="820">
+</p>
 
 Multi-file diffs, such as a whole commit opened from the Source Control Graph, are not supported. Open a single file's diff instead.
 
@@ -57,6 +85,10 @@ Multi-file diffs, such as a whole commit opened from the Source Control Graph, a
 | Explorer, two files | Select exactly two files, right-click, and click **Fluid Diff: Compare Selected** (`fluid-diff.fluidDiffSelected`) |
 | Diff editor title bar | Click **Fluid Diff: From Diff Editor** (`fluid-diff.fromDiffEditor`) while a single-file diff is active |
 
+<p align="center">
+  <img src="images/command.png" alt="Fluid Diff: Git in the VS Code Command Palette" width="820">
+</p>
+
 ## Themes
 
 Run **Fluid Diff: Select Theme** from the Command Palette, or set `fluid-diff.theme` in Settings.
@@ -69,6 +101,10 @@ Run **Fluid Diff: Select Theme** from the Command Palette, or set `fluid-diff.th
 | `Dracula` | Dracula palette, with comments brightened for readability |
 
 The theme applies to diff panels opened after the change.
+
+| Light | Dark | Dracula |
+| --- | --- | --- |
+| <img src="images/theme-light.png" alt="Fluid Diff Light theme"> | <img src="images/theme-dark.png" alt="Fluid Diff Dark theme"> | <img src="images/theme-dracula.png" alt="Fluid Diff Dracula theme"> |
 
 ## Features
 
@@ -122,3 +158,5 @@ npm test          # compile, lint, then run tests
 ```
 
 Press `F5` in VS Code to start an Extension Development Host with Fluid Diff loaded.
+
+To refresh the README images after a UI change, run `scripts/demo/make-demo.sh` on macOS, or pass `stills`, `git`, `compare`, or `timeline` to redo only some of them. See [`scripts/demo/README.md`](scripts/demo/README.md) for requirements. The GIF click positions live in `scripts/demo/scenes/`.
