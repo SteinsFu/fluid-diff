@@ -1,7 +1,7 @@
 {
   "name": "fluid-diff",
   "displayName": "fluid-diff",
-  "description": "Fluid gap-free side-by-side diff viewer (Beyond Compare and Meld Style).",
+  "description": "Fluid gap-free side-by-side diff viewer (Meld Style and SmartGit Style).",
   "version": "1.0.0",
   "publisher": "fluid-diff",
   "icon": "images/icon.png",

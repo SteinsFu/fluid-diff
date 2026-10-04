@@ -6,7 +6,7 @@
 
 **Side-by-side diff viewer for VS Code, in the style of Meld and SmartGit.**
 
-Aligned panes · Word-level highlights · Syntax coloring
+Intuitive Diff UI · Aligned panes · Word-level highlights
 
 <img src="images/theme-dark.png" alt="Side-by-side Fluid Diff in VS Code" width="820">
 
@@ -159,4 +159,4 @@ npm test          # compile, lint, then run tests
 
 Press `F5` in VS Code to start an Extension Development Host with Fluid Diff loaded.
 
-To refresh the README images after a UI change, run `scripts/demo/make-demo.sh` on macOS, or pass `stills`, `git`, `compare`, or `timeline` to redo only some of them. See [`scripts/demo/README.md`](scripts/demo/README.md) for requirements. The GIF click positions live in `scripts/demo/scenes/`.
+To refresh the README images after a UI change, run `scripts/demo/make-images.sh` on macOS, or pass `stills`, `git`, `compare`, or `timeline` to redo only some of them. See [`scripts/demo/README.md`](scripts/demo/README.md) for requirements. The GIF click positions live in `scripts/demo/scenes/`.

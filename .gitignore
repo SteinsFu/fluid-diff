@@ -3,3 +3,8 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+videos/
+
+__pycache__/
+*.pyc
+.cursor/

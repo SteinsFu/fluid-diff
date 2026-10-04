@@ -1,5 +1,5 @@
-// Sets up each demo scene for make-demo.sh. It is copied to <demo>/ext/driver,
-// so the demo root is two levels up. make-demo.sh picks the scene in <demo>/mode.txt
+// Sets up each demo scene for make-images.sh and make-videos.sh. It is copied to <demo>/ext/driver,
+// so the demo root is two levels up. The scripts pick the scene in <demo>/mode.txt
 // and waits for this file to write <demo>/ready. GIF input comes from input.swift.
 const vscode = require('vscode');
 const fs = require('fs');
@@ -54,10 +54,10 @@ async function activate() {
         } else if (mode === 'diff') {
             await run('fluid-diff.fluidDiffGit');
             await delay(600);
-        } else if (mode === 'gif-preview' || mode === 'gif-ruler') {
+        } else if (mode === 'gif-preview' || mode === 'gif-ruler' || mode === 'gif-words') {
             await run('fluid-diff.fluidDiffGit');
             await delay(1500);
-        } else if (mode === 'gif-git') {
+        } else if (mode === 'gif-git' || mode === 'gif-theme') {
             await warm('fluid-diff.fluidDiffGit');
         } else if (mode === 'gif-compare') {
             await warm('fluid-diff.fluidDiffSelected', V1, [V1, V2]);

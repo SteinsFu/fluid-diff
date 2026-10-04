@@ -4,14 +4,20 @@ Usage:
     python3 compose.py still <raw.png> <out.png>
     python3 compose.py gif <frames_dir> <events.jsonl> <cursor.png> <hotspot-x> <hotspot-y> <cursor-width> <out_dir>
 
+    python3 compose.py video <screen.mkv> <events.jsonl> <pixels-per-point> <out.mp4>
+
 `gif` renders evenly timed frames. Each frame uses the latest capture at that moment,
 then draws the cursor, click ripples, key badges, and camera zoom from the input.swift log.
 Capture times come from the frame files' modification times.
+
+`video` does the same for a screen recording cropped to the window, at VIDEO_FPS. The
+recording already shows the real cursor. Its timestamps are wall-clock epoch seconds.
 """
 
 import bisect
 import json
 import os
+import subprocess
 import sys
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -25,6 +31,9 @@ CURSOR_SCALE = 1.5  # a little larger than life so it reads at GIF size
 RIPPLE_MS = 450
 BADGE_MS = 1400
 FONT = "/System/Library/Fonts/LucidaGrande.ttc"  # SFNS has no ↩ glyph
+VIDEO_WIDTH = 1920
+VIDEO_FPS = 60
+LEAD_MS = 1000  # clip time kept before the first input event
 
 
 def window_rect(cap):
@@ -155,10 +164,80 @@ def gif(frames_dir, events_path, cursor_path, hot_x, hot_y, cursor_w, out_dir):
         t += 1000 / GIF_FPS
 
 
+def video(src, events_path, scale, dst):
+    info = json.loads(subprocess.check_output(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                                               "stream=width,height:format=start_time", "-of", "json", src]))
+    W, H = info["streams"][0]["width"], info["streams"][0]["height"]
+    t_first = float(info["format"]["start_time"]) * 1000
+    events = [json.loads(line) for line in open(events_path)]
+    out_w, out_h = VIDEO_WIDTH, round(H * VIDEO_WIDTH / W / 2) * 2
+    k = VIDEO_WIDTH / GIF_WIDTH  # badge sizes are tuned for GIF_WIDTH
+
+    full = (W / 2, H / 2, 1.0)
+    shots = []
+
+    def camera(t):
+        i = bisect.bisect_right([s[0] for s in shots], t) - 1
+        if i < 0:
+            return full
+        t0, a, b = shots[i]
+        p = ease((t - t0) / ZOOM_MS)
+        return tuple(a[j] + (b[j] - a[j]) * p for j in range(3))
+
+    for e in events:
+        if "zoom" in e:
+            x, y, s = e["zoom"]
+            shots.append((e["t"], camera(e["t"]), (x * scale, y * scale, s)))
+    clicks = [(e["t"], e["click"][0] * scale, e["click"][1] * scale) for e in events if "click" in e]
+    keys = [(e["t"], e["keys"]) for e in events if "keys" in e]
+    font = ImageFont.truetype(FONT, round(34 * k))
+
+    begin = max(events[0]["t"] - LEAD_MS - t_first, 0) / 1000
+    dec = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", f"{begin:.3f}", "-i", src, "-vf", f"fps={VIDEO_FPS}",
+                            "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
+    enc = subprocess.Popen(["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{out_w}x{out_h}",
+                            "-r", str(VIDEO_FPS), "-i", "-", "-c:v", "libx264", "-crf", "14", "-pix_fmt", "yuv420p", dst],
+                           stdin=subprocess.PIPE)
+    n, size = 0, W * H * 3
+    while len(buf := dec.stdout.read(size)) == size:
+        t = t_first + begin * 1000 + n * 1000 / VIDEO_FPS
+        cx, cy, s = camera(t)
+        vw, vh = W / s, H / s
+        left = min(max(cx - vw / 2, 0), W - vw)
+        top = min(max(cy - vh / 2, 0), H - vh)
+        out = Image.frombytes("RGB", (W, H), buf).resize((out_w, out_h), Image.Resampling.BICUBIC,
+                                                        box=(left, top, left + vw, top + vh)).convert("RGBA")
+        zoom = out_w / vw
+        overlay = Image.new("RGBA", out.size, (0, 0, 0, 0))
+        d = ImageDraw.Draw(overlay)
+        for tc, x, y in clicks:
+            p = (t - tc) / RIPPLE_MS
+            if 0 <= p <= 1:
+                x, y = (x - left) * zoom, (y - top) * zoom
+                r = (12 + 30 * ease(p)) * scale * zoom
+                d.ellipse((x - r, y - r, x + r, y + r), outline=(60, 140, 255, round(220 * (1 - p))), width=round(3 * scale * zoom))
+        for tk, label in keys:
+            p = (t - tk) / BADGE_MS
+            if 0 <= p <= 1:
+                fade = min(1.0, (1 - p) * 4)
+                tw = d.textlength(label, font=font)
+                bx, by = (out_w - tw) / 2, out_h - 110 * k
+                d.rounded_rectangle((bx - 26 * k, by - 16 * k, bx + tw + 26 * k, by + 56 * k), radius=18 * k, fill=(30, 30, 30, round(215 * fade)))
+                d.text((bx, by), label, font=font, fill=(255, 255, 255, round(255 * fade)))
+        out.alpha_composite(overlay)
+        enc.stdin.write(out.convert("RGB").tobytes())
+        n += 1
+    enc.stdin.close()
+    if dec.wait() or enc.wait():
+        sys.exit("ffmpeg failed")
+
+
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "still":
         still(*sys.argv[2:4])
+    elif cmd == "video":
+        video(sys.argv[2], sys.argv[3], float(sys.argv[4]), sys.argv[5])
     elif cmd == "gif":
         a = sys.argv[2:]
         gif(a[0], a[1], a[2], float(a[3]), float(a[4]), float(a[5]), a[6])
