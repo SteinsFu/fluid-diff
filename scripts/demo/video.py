@@ -280,12 +280,11 @@ def main():
         music.write(board["music"], total + 1, song)
     m = len(segs) + 1
     mix = "".join(f"[{i + 1}:a]adelay={round((s['t0'] + LEAD) * 1000)}:all=1[a{i}];" for i, s in enumerate(segs))
-    mix += "".join(f"[a{i}]" for i in range(len(segs))) + f"amix=inputs={len(segs)}:normalize=0,asplit=2[voice][key];"
-    # The music ducks under the voice, and fades in and out.
-    mix += (f"[{m}:a]volume={board.get('music_volume', 0.3)},afade=t=in:d=0.8,"
+    mix += "".join(f"[a{i}]" for i in range(len(segs))) + f"amix=inputs={len(segs)}:normalize=0[voice];"
+    # The music stays at one level under the voice, fading in and out only at the ends.
+    mix += (f"[{m}:a]volume={board.get('music_volume', 0.15)},afade=t=in:d=0.8,"
             f"afade=t=out:st={max(total - 3, 0):.3f}:d=3[bed];"
-            "[bed][key]sidechaincompress=threshold=0.02:ratio=5:attack=20:release=400[ducked];"
-            "[voice][ducked]amix=inputs=2:normalize=0,apad[a]")
+            "[voice][bed]amix=inputs=2:normalize=0,apad[a]")
     enc = subprocess.Popen(
         ["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-"]
         + sum((["-i", s["mp3"]] for s in segs), []) + ["-stream_loop", "-1", "-i", song]

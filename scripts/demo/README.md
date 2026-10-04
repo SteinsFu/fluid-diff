@@ -75,7 +75,7 @@ Environment overrides:
 | `input.swift` | Plays a scene with real input events and logs them. Also exports the macOS arrow cursor image |
 | `window.swift` | Finds the demo window ID and position |
 | `compose.py` | Adds the white background and shadow to stills. For GIFs, draws the cursor, click ripples and key badges, and applies the zoom. For clips, does the same on the 60 fps screen recording, which already shows the real cursor |
-| `video.py` | Cuts a video from the clips: narration, captions, titles, layout, music ducked under the voice |
+| `video.py` | Cuts a video from the clips: narration, captions, titles, layout, music at one steady level under the voice |
 | `music.py` | Synthesizes the background music, so there are no audio files or licenses to track: `upbeat` (124 BPM house) and `lofi` (80 BPM lo-fi hip-hop) |
 | `videos/short.json`, `videos/long.json` | Storyboards: which clip plays in each segment, the narration line, and the on-screen title |
 
