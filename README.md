@@ -141,7 +141,7 @@ These messages come from **Fluid Diff: Git**. If a check fails, the panel stays 
 - [x] Reopen a built-in single-file diff
 - [ ] Open changes from git graph
 - [ ] Diffing in Markdown preview
-- [ ] For git diff, add stage and revert buttons for each code chunk
+- [ ] For git diff, add cherry pick featuers (stage and revert buttons) for each code chunk
 
 ## Limits
 
