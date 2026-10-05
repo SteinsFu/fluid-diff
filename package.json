@@ -5,6 +5,7 @@
   "keywords": [
     "diff",
     "diff viewer",
+    "diff tool",
     "side-by-side diff",
     "compare",
     "compare files",
@@ -13,14 +14,13 @@
     "git diff",
     "meld",
     "smartgit",
-    "beyond compare",
-    "winmerge",
-    "kdiff3",
+    "jetbrains git diff",
     "code review",
     "changes",
     "word diff",
     "aligned diff",
-    "visual diff"
+    "visual diff",
+    "code review"
   ],
   "version": "1.0.4",
   "publisher": "steinsfu",
