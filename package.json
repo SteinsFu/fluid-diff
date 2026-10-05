@@ -1,7 +1,13 @@
 {
   "name": "fluid-diff",
-  "displayName": "fluid-diff",
-  "description": "Fluid gap-free side-by-side diff viewer (Meld Style and SmartGit Style).",
+  "displayName": "Fluid Diff: Side-by-Side Diff Viewer",
+  "description": "Side-by-side diff viewer in the style of Meld and SmartGit: aligned panes, connectors, word-level highlights. Compare with Git HEAD, two files, or any VS Code diff.",
+  "keywords": [
+    "diff", "diff viewer", "side-by-side diff", "compare", "compare files",
+    "file compare", "git", "git diff", "meld", "smartgit", "beyond compare",
+    "winmerge", "kdiff3", "code review", "changes", "word diff",
+    "aligned diff", "visual diff"
+  ],
   "version": "1.0.0",
   "publisher": "steinsfu",
   "license": "MIT",
@@ -14,7 +20,7 @@
     "url": "https://github.com/SteinsFu/fluid-diff"
   },
   "categories": [
-    "Other"
+    "SCM Providers", "Visualization", "Other"
   ],
   "activationEvents": [],
   "extensionDependencies": [
