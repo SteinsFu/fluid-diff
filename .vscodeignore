@@ -2,6 +2,8 @@
 .vscode-test/**
 src/**
 scripts/**
+examples/**
+out/test/**
 images/**
 !images/icon.png
 !images/icon.svg
