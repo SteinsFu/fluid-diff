@@ -3,12 +3,26 @@
   "displayName": "Fluid Diff: Side-by-Side Diff Viewer",
   "description": "Side-by-side diff viewer in the style of Meld and SmartGit: aligned panes, connectors, word-level highlights. Compare with Git HEAD, two files, or any VS Code diff.",
   "keywords": [
-    "diff", "diff viewer", "side-by-side diff", "compare", "compare files",
-    "file compare", "git", "git diff", "meld", "smartgit", "beyond compare",
-    "winmerge", "kdiff3", "code review", "changes", "word diff",
-    "aligned diff", "visual diff"
+    "diff",
+    "diff viewer",
+    "side-by-side diff",
+    "compare",
+    "compare files",
+    "file compare",
+    "git",
+    "git diff",
+    "meld",
+    "smartgit",
+    "beyond compare",
+    "winmerge",
+    "kdiff3",
+    "code review",
+    "changes",
+    "word diff",
+    "aligned diff",
+    "visual diff"
   ],
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "steinsfu",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -20,7 +34,9 @@
     "url": "https://github.com/SteinsFu/fluid-diff"
   },
   "categories": [
-    "SCM Providers", "Visualization", "Other"
+    "SCM Providers",
+    "Visualization",
+    "Other"
   ],
   "activationEvents": [],
   "extensionDependencies": [
@@ -54,10 +70,10 @@
           "when": "editorTextFocus && !isInDiffEditor",
           "group": "3_compare"
         },
-        { 
-          "command": "fluid-diff.fromDiffEditor", 
-          "when": "isInDiffEditor", 
-          "group": "navigation" 
+        {
+          "command": "fluid-diff.fromDiffEditor",
+          "when": "isInDiffEditor",
+          "group": "navigation"
         }
       ],
       "explorer/context": [
@@ -78,7 +94,12 @@
       "properties": {
         "fluid-diff.theme": {
           "type": "string",
-          "enum": ["Auto", "Light", "Dark", "Dracula"],
+          "enum": [
+            "Auto",
+            "Light",
+            "Dark",
+            "Dracula"
+          ],
           "default": "Auto",
           "description": "Color theme for the Fluid Diff view. Auto chooses light or dark theme based on the VS Code theme.."
         }
