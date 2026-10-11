@@ -71,6 +71,7 @@ export function activate(context: vscode.ExtensionContext) {
         const lang = activeEditor.document.languageId;
         
         const render = async () => { 
+            const getIndexText = async () => await git(repo.rootUri.fsPath, ['show', `:${relPath(repo, fileName)}`]);
             panel.webview.html = await getWebviewContent(
                 context, 
                 await repo.show('HEAD', fileName), 
@@ -79,10 +80,18 @@ export function activate(context: vscode.ExtensionContext) {
                 lang, 
                 theme, 
                 `${fileName} (HEAD)`, 
-                fileName, true
+                fileName,
+                await getIndexText()
             );
         }
         await render();
+
+        // Refresh when the tab is shown again: the buffer, index or HEAD may have changed meanwhile
+        panel.onDidChangeViewState(() => {
+            if (panel.visible) {
+                render().catch(err => vscode.window.showErrorMessage(`Fluid Diff: ${(err as Error).message}`));
+            }
+        });
 
         // 5. Message listeners: rebuild the webview when git buttons are clicked
         panel.webview.onDidReceiveMessage(async ({ type, chunk }: { type: string; chunk: Chunk }) => {
@@ -96,7 +105,9 @@ export function activate(context: vscode.ExtensionContext) {
                 } else if (type === 'revert') {
                     await revertChunk(doc, a, b, chunk);
                 } else if (type === 'stage') {
-                    await stageChunk(repo, doc, b, chunk)
+                    await copyToIndex(repo, fileName, b, chunk.b0, chunk.b1)
+                } else if (type === 'unstage') {
+                    await copyToIndex(repo, fileName, a, chunk.a0, chunk.a1)
                 }
                 await render();
             } catch (err) {
@@ -178,10 +189,28 @@ export function deactivate() {}
 
 
 // helper function to generate the HTML content for the webview
-async function getWebviewContent(context: vscode.ExtensionContext, textA: string, textB: string, langA: string, langB: string, theme: string, pathA: string, pathB: string, hasGitActions: boolean = false): Promise<string> {
+export async function getWebviewContent(
+    context: vscode.ExtensionContext, 
+    textA: string, textB: string, 
+    langA: string, langB: string, 
+    theme: string, 
+    pathA: string, pathB: string, 
+    gitIndexText?: string,       // if index text is provided, Git mode => show revert/stage buttons
+): Promise<string> {
     const linesA = textA.split(/\r?\n/);
     const linesB = textB.split(/\r?\n/);
     const chunks = diffLines(linesA, linesB);
+
+    // mark staged chunks (for git mode only)
+    if (gitIndexText !== undefined) {
+        const index = gitIndexText.split(/\r?\n/);
+        const pending = diffLines(index, linesB);   // not staged yet, in buffer coordinates
+        const staged = diffLines(linesA, index);    // already staged, in HEAD coordinates
+        for (const c of chunks) {
+            c.staged = !pending.some(pc => pc.b0 <= c.b1 && c.b0 <= pc.b1);
+            c.hasStaged = staged.some(sc => sc.a0 <= c.a1 && c.a0 <= sc.a1);
+        }
+    }
 
     // syntax-color the lines
     const [coloreToksA, coloreToksB] = await Promise.all([
@@ -207,7 +236,7 @@ async function getWebviewContent(context: vscode.ExtensionContext, textA: string
             : token === '{{chunks}}' ? JSON.stringify(chunks)
             : token === '{{pathA}}' ? escape(pathA)
             : token === '{{pathB}}' ? escape(pathB)
-            : token === '{{hasGitActions}}' ? String(hasGitActions)
+            : token === '{{hasGitActions}}' ? String(gitIndexText !== undefined)
             : theme
     );
     return htmlContent;
@@ -223,6 +252,11 @@ function renderLines(lines: string[], chunks: Chunk[], side: 'a' | 'b', words: M
         if (s < e) { cls[s] += ' chunk-start'; cls[e - 1] += ' chunk-end'; }
         if (s === e) {
             if (s < lines.length) { cls[s] += ' gap-before'; } else if (s > 0) { cls[s - 1] += ' gap-after'; }
+        }
+        if (c.staged) {
+            for (let i = s; i < e; i++) {
+                cls[i] += ' staged';
+            }
         }
     }
     const renderText = (l: string, marks: WordMark[] = [], coloredToks: ColoredTok[] = []) => {
@@ -330,7 +364,7 @@ function getTheme(): string {
 }
 
 
-async function revertChunk(doc: vscode.TextDocument, a: string[], b: string[], c: Chunk) {
+export async function revertChunk(doc: vscode.TextDocument, a: string[], b: string[], c: Chunk) {
     // replace the chunk in b with the chunk in a
     b.splice(c.b0, c.b1 - c.b0, ...a.slice(c.a0, c.a1));
     const edit = new vscode.WorkspaceEdit();
@@ -340,32 +374,37 @@ async function revertChunk(doc: vscode.TextDocument, a: string[], b: string[], c
 }
 
 const execFileP = promisify(execFile);
+const relPath = (repo: GitRepo, fileName: string) => path.relative(repo.rootUri.fsPath, fileName).split(path.sep).join('/');
+
 async function git(cwd: string, args: string[], input?: string): Promise<string> {
     const p = execFileP('git', args, { cwd, maxBuffer: 64 << 20 });  // 64MB buffer (64 * 2^20 bytes) for large files
     if (input !== undefined) { p.child.stdin!.end(input); }
     return (await p).stdout;
 }
 
-async function stageChunk(repo: GitRepo, doc: vscode.TextDocument, b: string[], c: Chunk) {
+
+// helper function to stage or unstage a chunk
+// make the index match `source` (buffer to stage, HEAD to unstage) wherever it overlaps lines [lo, hi) of `source`.
+export async function copyToIndex(repo: GitRepo, fileName: string, source: string[], lo: number, hi: number) {
     const cwd = repo.rootUri.fsPath;
-    const rel = path.relative(cwd, doc.fileName).split(path.sep).join('/');
-    const index = (await git(cwd, ['show', `:${rel}`])).split(/\r?\n/);     // git show :path/to/file.txt => get the file's content from the index (staging area)
+    const rel = relPath(repo, fileName);
+    const raw = await git(cwd, ['show', `:${rel}`]);     // git show :path/to/file.txt => get the file's content from the index (staging area)
+    const eol = raw.includes('\r\n') ? '\r\n' : '\n';    // keep the blob's line endings, or one chunk would rewrite every line
+    const index = raw.split(/\r?\n/);
     // "touching" counts as overlap, so an index chunk right next to this one gets staged too
-    const hits = diffLines(index, b).filter(ic => ic.b0 <= c.b1 && c.b0 <= ic.b1);
+    const hits = diffLines(index, source).filter(ic => ic.b0 <= hi && lo <= ic.b1);
     if (!hits.length) {
-        // No hits means the index already equals the buffer in that area
-        vscode.window.showInformationMessage(`Fluid Diff: Chunk already staged.`);
+        // No hits means the index already equals the source in that area
         return;
     }
-    // if the chunk is not in the index (not staged), stage it
     // reverse() to replace chunks bottom-up to avoid line number shifting issues
     for (const ic of hits.reverse()) {
-        index.splice(ic.a0, ic.a1 - ic.a0, ...b.slice(ic.b0, ic.b1));
+        index.splice(ic.a0, ic.a1 - ic.a0, ...source.slice(ic.b0, ic.b1));
     }
     // 1. `hash-object -w --stdin --path=rel` reads the text from stdin, saves it into .git/objects (that's the -w), and prints its SHA.
     // 2. `ls-files -s -- rel` prints the current index entry, for example `100644 3f2a... 0 src/x.ts`. The first word is the mode, and keeping it means an executable file stays executable.
     // 3. `update-index --cacheinfo mode,sha,path` repoints this path's index entry at the new blob
-    const sha = (await git(cwd, ['hash-object', '-w', '--stdin', `--path=${rel}`], index.join('\n'))).trim();
+    const sha = (await git(cwd, ['hash-object', '-w', '--stdin', `--path=${rel}`], index.join(eol))).trim();
     const mode = (await git(cwd, ['ls-files', '-s', '--', rel])).split(' ')[0] || '100644'; 
     await git(cwd, ['update-index', '--add', '--cacheinfo', `${mode},${sha},${rel}`]);
 }
