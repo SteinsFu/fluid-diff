@@ -4,12 +4,18 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { diffLines, diffBlock, Chunk, WordMark } from './diff';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 
 // Subset of the built-in Git extension API we use; full typings live in vscode's extensions/git/src/api/git.d.ts.
+interface GitRepo {
+    rootUri: vscode.Uri;
+    show(ref: string, path: string): Promise<string>;
+}
 interface GitExtension {
     getAPI(version: 1): {
-        getRepository(uri: vscode.Uri): { show(ref: string, path: string): Promise<string> } | null;
-    };
+        getRepository(uri: vscode.Uri): GitRepo | null;
+    }
 }
 
 // This method is called when your extension is activated
@@ -28,22 +34,23 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        // 1. Get current text from the active file
-        const currentText = activeEditor.document.getText();
-        const fileName = activeEditor.document.fileName;
+        // 1. Get file name
+        const doc = activeEditor.document
+        const fileName = doc.fileName;
 
-        // 2. Get the last committed version of the file from git
-        let previousText: string;
+        // 2. Check if the file is in a git repository
+        let repo: GitRepo;
         try {
             const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git');
             if (!gitExtension) {
                 throw new Error('the built-in Git extension is disabled');
             }
-            const repo = (await gitExtension.activate()).getAPI(1).getRepository(activeEditor.document.uri);
-            if (!repo) {
+            const r = (await gitExtension.activate()).getAPI(1).getRepository(doc.uri);
+            if (!r) {
                 throw new Error('file is not in a git repository');
             }
-            previousText = await repo.show('HEAD', fileName);
+            await r.show('HEAD', fileName);
+            repo = r; 
         } catch (err) {
             vscode.window.showErrorMessage(`No git HEAD version of ${path.basename(fileName)}: ${(err as Error).message}`);
             return;
@@ -62,7 +69,40 @@ export function activate(context: vscode.ExtensionContext) {
         // 4. Set the HTML content of the webview panel
         const theme = getTheme();
         const lang = activeEditor.document.languageId;
-        panel.webview.html = await getWebviewContent(context, previousText, currentText, lang, lang, theme, `${fileName} (HEAD)`, fileName);
+        
+        const render = async () => { 
+            panel.webview.html = await getWebviewContent(
+                context, 
+                await repo.show('HEAD', fileName), 
+                doc.getText(), 
+                lang, 
+                lang, 
+                theme, 
+                `${fileName} (HEAD)`, 
+                fileName, true
+            );
+        }
+        await render();
+
+        // 5. Message listeners: rebuild the webview when git buttons are clicked
+        panel.webview.onDidReceiveMessage(async ({ type, chunk }: { type: string; chunk: Chunk }) => {
+            try {
+                const a = (await repo.show('HEAD', fileName)).split(/\r?\n/);
+                const b = doc.getText().split(/\r?\n/);
+                const same = (c: Chunk) => c.a0 === chunk.a0 && c.a1 === chunk.a1 && c.b0 === chunk.b0 && c.b1 === chunk.b1;
+                if (!diffLines(a, b).some(same)) {
+                    // the chunk no longer exists, redraw the webview
+                    vscode.window.showWarningMessage(`Fluid Diff: File changed since render; view refreshed.`);
+                } else if (type === 'revert') {
+                    await revertChunk(doc, a, b, chunk);
+                } else if (type === 'stage') {
+                    await stageChunk(repo, doc, b, chunk)
+                }
+                await render();
+            } catch (err) {
+                vscode.window.showErrorMessage(`Fluid Diff: ${(err as Error).message}`);
+            }
+        })
 
         // Mock test data
         // panel.webview.html = await getWebviewContent(context,
@@ -138,7 +178,7 @@ export function deactivate() {}
 
 
 // helper function to generate the HTML content for the webview
-async function getWebviewContent(context: vscode.ExtensionContext, textA: string, textB: string, langA: string, langB: string, theme: string, pathA: string, pathB: string, gitActions: boolean = false): Promise<string> {
+async function getWebviewContent(context: vscode.ExtensionContext, textA: string, textB: string, langA: string, langB: string, theme: string, pathA: string, pathB: string, hasGitActions: boolean = false): Promise<string> {
     const linesA = textA.split(/\r?\n/);
     const linesB = textB.split(/\r?\n/);
     const chunks = diffLines(linesA, linesB);
@@ -161,13 +201,13 @@ async function getWebviewContent(context: vscode.ExtensionContext, textA: string
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
     // Function replacers: file text may contain `$&`-style patterns that string replacers expand.
     const htmlContent = fs.readFileSync(htmlPath, 'utf8').replace(
-        /\{\{(textA|textB|chunks|theme|pathA|pathB|gitActions)\}\}/g,
+            /\{\{(textA|textB|chunks|theme|pathA|pathB|hasGitActions)\}\}/g,
         (token) => token === '{{textA}}' ? renderLines(linesA, chunks, 'a', words.a, coloreToksA)
             : token === '{{textB}}' ? renderLines(linesB, chunks, 'b', words.b, coloreToksB)
             : token === '{{chunks}}' ? JSON.stringify(chunks)
             : token === '{{pathA}}' ? escape(pathA)
             : token === '{{pathB}}' ? escape(pathB)
-            : token === '{{gitActions}}' ? String(gitActions)
+            : token === '{{hasGitActions}}' ? String(hasGitActions)
             : theme
     );
     return htmlContent;
@@ -287,4 +327,45 @@ function getTheme(): string {
         return config.toLowerCase();
     }
     return 'dark';
+}
+
+
+async function revertChunk(doc: vscode.TextDocument, a: string[], b: string[], c: Chunk) {
+    // replace the chunk in b with the chunk in a
+    b.splice(c.b0, c.b1 - c.b0, ...a.slice(c.a0, c.a1));
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(doc.uri, doc.validateRange(new vscode.Range(0, 0, doc.lineCount, 0)),
+        b.join(doc.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n'));
+    await vscode.workspace.applyEdit(edit);
+}
+
+const execFileP = promisify(execFile);
+async function git(cwd: string, args: string[], input?: string): Promise<string> {
+    const p = execFileP('git', args, { cwd, maxBuffer: 64 << 20 });  // 64MB buffer (64 * 2^20 bytes) for large files
+    if (input !== undefined) { p.child.stdin!.end(input); }
+    return (await p).stdout;
+}
+
+async function stageChunk(repo: GitRepo, doc: vscode.TextDocument, b: string[], c: Chunk) {
+    const cwd = repo.rootUri.fsPath;
+    const rel = path.relative(cwd, doc.fileName).split(path.sep).join('/');
+    const index = (await git(cwd, ['show', `:${rel}`])).split(/\r?\n/);     // git show :path/to/file.txt => get the file's content from the index (staging area)
+    // "touching" counts as overlap, so an index chunk right next to this one gets staged too
+    const hits = diffLines(index, b).filter(ic => ic.b0 <= c.b1 && c.b0 <= ic.b1);
+    if (!hits.length) {
+        // No hits means the index already equals the buffer in that area
+        vscode.window.showInformationMessage(`Fluid Diff: Chunk already staged.`);
+        return;
+    }
+    // if the chunk is not in the index (not staged), stage it
+    // reverse() to replace chunks bottom-up to avoid line number shifting issues
+    for (const ic of hits.reverse()) {
+        index.splice(ic.a0, ic.a1 - ic.a0, ...b.slice(ic.b0, ic.b1));
+    }
+    // 1. `hash-object -w --stdin --path=rel` reads the text from stdin, saves it into .git/objects (that's the -w), and prints its SHA.
+    // 2. `ls-files -s -- rel` prints the current index entry, for example `100644 3f2a... 0 src/x.ts`. The first word is the mode, and keeping it means an executable file stays executable.
+    // 3. `update-index --cacheinfo mode,sha,path` repoints this path's index entry at the new blob
+    const sha = (await git(cwd, ['hash-object', '-w', '--stdin', `--path=${rel}`], index.join('\n'))).trim();
+    const mode = (await git(cwd, ['ls-files', '-s', '--', rel])).split(' ')[0] || '100644'; 
+    await git(cwd, ['update-index', '--add', '--cacheinfo', `${mode},${sha},${rel}`]);
 }

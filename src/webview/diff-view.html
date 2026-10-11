@@ -348,12 +348,13 @@
     const OUTLINE_COLORS = Object.fromEntries(['insert', 'delete', 'replace'].map(t => [t, rootStyle.getPropertyValue(`--outline-${t}`).trim()]));
     const CHUNK_COLORS = Object.fromEntries(['insert', 'delete', 'replace'].map(t => [t, rootStyle.getPropertyValue(`--chunk-${t}`).trim()]));
     // Chunk actions: revert, stage
-    const GIT_ACTIONS = Boolean('{{gitActions}}') === true;
-    const vscode = GIT_ACTIONS ? acquireVsCodeApi() : null;
+    const HAS_GIT_ACTIONS = JSON.parse('{{hasGitActions}}');  // boolean
+    console.log('{{hasGitActions}}', HAS_GIT_ACTIONS);
+    const vscode = HAS_GIT_ACTIONS ? acquireVsCodeApi() : null;
     const actionContainerEl = document.createElement('div');
     actionContainerEl.className = 'chunk-actions-container';
     rightPane.firstElementChild.prepend(actionContainerEl);
-    const actionEls = GIT_ACTIONS ? chunks.map(c => {
+    const actionEls = HAS_GIT_ACTIONS ? chunks.map(c => {
       const el = document.createElement('div');
       el.className = 'chunk-actions';
       el.innerHTML = '<button title="Revert chunk">↶</button><button title="Stage chunk">+</button>';
