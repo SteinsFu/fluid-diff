@@ -8,7 +8,7 @@ import { execFileSync } from 'child_process';
 // as well as import your extension to test it
 import * as vscode from 'vscode';
 import { diffBlock, diffLines, diffWords } from '../diff';
-import { copyToIndex, getWebviewContent, revertChunk } from '../extension';
+import { copyToIndex, getWebviewContent, revertChunk, undoRevert, RevertHistory } from '../extension';
 
 const ext = () => vscode.extensions.all.find(e => e.packageJSON.name === 'fluid-diff')!;
 
@@ -160,5 +160,32 @@ suite('Revert chunk', () => {
         const [first] = diffLines(a, b);
         await revertChunk(doc, a, b, first);
         assert.strictEqual(doc.getText(), 'a\nb\nc\nD\n');
+    });
+
+    test('undo restores reverts in reverse order, but never over a later edit', async () => {
+        const doc = await vscode.workspace.openTextDocument({ content: 'a\nB\nc\nD\n' });
+        const head = 'a\nb\nc\nd\n'.split('\n');
+        const history: RevertHistory = [];
+        const revert = async (k: number) => {
+            const b = doc.getText().split('\n');
+            const before = doc.getText();
+            await revertChunk(doc, head, b, diffLines(head, b)[k]);
+            history.push({ before, after: doc.getText() });
+        };
+        await revert(1);
+        await revert(0);
+        assert.strictEqual(doc.getText(), 'a\nb\nc\nd\n');
+        assert.ok(await undoRevert(doc, history));
+        assert.strictEqual(doc.getText(), 'a\nB\nc\nd\n');
+        assert.ok(await undoRevert(doc, history));
+        assert.strictEqual(doc.getText(), 'a\nB\nc\nD\n');
+        assert.ok(await undoRevert(doc, history), 'empty history is a no-op');
+
+        await revert(0);
+        const edit = new vscode.WorkspaceEdit();
+        edit.insert(doc.uri, new vscode.Position(0, 0), 'typed ');
+        await vscode.workspace.applyEdit(edit);
+        assert.strictEqual(await undoRevert(doc, history), false);
+        assert.strictEqual(doc.getText(), 'typed a\nb\nc\nD\n');
     });
 });

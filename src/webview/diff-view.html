@@ -419,6 +419,13 @@
       saveScroll();
       vscode.postMessage(msg);
     }
+    // Ctrl/Cmd+Z undoes the last revert button click; the extension owns that history
+    if (HAS_GIT_ACTIONS) window.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        send({ type: 'undo' });
+      }
+    });
 
     // Draw ruler marks & viewports
     drawRulerMarks();

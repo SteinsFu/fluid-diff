@@ -94,8 +94,16 @@ export function activate(context: vscode.ExtensionContext) {
         });
 
         // 5. Message listeners: rebuild the webview when git buttons are clicked
+        const reverts: RevertHistory = [];
         panel.webview.onDidReceiveMessage(async ({ type, chunk }: { type: string; chunk: Chunk }) => {
             try {
+                if (type === 'undo') {
+                    if (!await undoRevert(doc, reverts)) {
+                        vscode.window.showWarningMessage('Fluid Diff: File was edited after the revert; use undo in the editor instead.');
+                    }
+                    await render();
+                    return;
+                }
                 const a = (await repo.show('HEAD', fileName)).split(/\r?\n/);
                 const b = doc.getText().split(/\r?\n/);
                 const same = (c: Chunk) => c.a0 === chunk.a0 && c.a1 === chunk.a1 && c.b0 === chunk.b0 && c.b1 === chunk.b1;
@@ -103,7 +111,9 @@ export function activate(context: vscode.ExtensionContext) {
                     // the chunk no longer exists, redraw the webview
                     vscode.window.showWarningMessage(`Fluid Diff: File changed since render; view refreshed.`);
                 } else if (type === 'revert') {
+                    const before = doc.getText();
                     await revertChunk(doc, a, b, chunk);
+                    reverts.push({ before, after: doc.getText() });
                 } else if (type === 'stage') {
                     await copyToIndex(repo, fileName, b, chunk.b0, chunk.b1)
                 } else if (type === 'unstage') {
@@ -367,10 +377,28 @@ function getTheme(): string {
 export async function revertChunk(doc: vscode.TextDocument, a: string[], b: string[], c: Chunk) {
     // replace the chunk in b with the chunk in a
     b.splice(c.b0, c.b1 - c.b0, ...a.slice(c.a0, c.a1));
+    await setText(doc, b.join(doc.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n'));
+}
+
+async function setText(doc: vscode.TextDocument, text: string) {
     const edit = new vscode.WorkspaceEdit();
-    edit.replace(doc.uri, doc.validateRange(new vscode.Range(0, 0, doc.lineCount, 0)),
-        b.join(doc.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n'));
+    edit.replace(doc.uri, doc.validateRange(new vscode.Range(0, 0, doc.lineCount, 0)), text);
     await vscode.workspace.applyEdit(edit);
+}
+
+// Text before and after each revert clicked in the Fluid Diff UI, latest last.
+export type RevertHistory = { before: string; after: string }[];
+
+// Undo the latest revert. Refuses (returns false) if the file was edited after it, so that edit isn't lost.
+export async function undoRevert(doc: vscode.TextDocument, history: RevertHistory): Promise<boolean> {
+    const last = history.pop();
+    if (!last) { return true; }
+    if (doc.getText() !== last.after) {
+        history.length = 0;
+        return false;
+    }
+    await setText(doc, last.before);
+    return true;
 }
 
 const execFileP = promisify(execFile);
