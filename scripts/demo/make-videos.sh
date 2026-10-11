@@ -5,7 +5,7 @@
 # Never touches images/: the README images are make-images.sh.
 #
 # Usage: scripts/demo/make-videos.sh [<clip>...] [render]   (default: every clip, then render)
-#   clips: preview ruler git compare timeline words theme preview-light preview-dracula
+#   clips: preview ruler git compare timeline chunks words theme preview-light preview-dracula
 #          (the scene is the part before any "-"; -light / -dracula pick the theme)
 #   render alone skips VS Code and re-cuts both videos from the existing clips.
 #
@@ -19,7 +19,7 @@
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
 CLIPS=$REPO/videos/clips
-ALL_CLIPS="preview ruler git compare timeline words theme preview-light preview-dracula"
+ALL_CLIPS="preview ruler git compare timeline chunks words theme preview-light preview-dracula"
 TARGETS=${*:-$ALL_CLIPS render}
 
 # A screen recording, since `screencapture -l` only manages ~7 fps.

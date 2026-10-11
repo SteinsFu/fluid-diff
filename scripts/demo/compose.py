@@ -89,7 +89,7 @@ def gif(frames_dir, events_path, cursor_path, hot_x, hot_y, cursor_w, out_dir):
     moves = [(e["t"], *to_canvas(*e["cursor"])) for e in events if "cursor" in e]
     move_times = [m[0] for m in moves]
     clicks = [(e["t"], *to_canvas(*e["click"])) for e in events if "click" in e]
-    keys = [(e["t"], e["keys"]) for e in events if "keys" in e]
+    keys = [(e["t"], e[k]) for e in events for k in ("keys", "caption") if k in e]
 
     # Each zoom step eases from wherever the camera is to its target.
     full = (W / 2, H / 2, 1.0)
@@ -189,7 +189,7 @@ def video(src, events_path, scale, dst):
             x, y, s = e["zoom"]
             shots.append((e["t"], camera(e["t"]), (x * scale, y * scale, s)))
     clicks = [(e["t"], e["click"][0] * scale, e["click"][1] * scale) for e in events if "click" in e]
-    keys = [(e["t"], e["keys"]) for e in events if "keys" in e]
+    keys = [(e["t"], e[k]) for e in events for k in ("keys", "caption") if k in e]
     font = ImageFont.truetype(FONT, round(34 * k))
 
     begin = max(events[0]["t"] - LEAD_MS - t_first, 0) / 1000

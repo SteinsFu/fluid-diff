@@ -10,7 +10,7 @@
 // Scene steps use points relative to the window's top-left corner:
 //   {"at": [x, y]}                     put the cursor there
 //   {"move": [x, y], "ms": 600}        glide the cursor there
-//   {"click": "left" | "right", "mods": ["cmd"]}
+//   {"click": "left" | "right", "mods": ["cmd"], "caption": "Stage chunk"}
 //   {"keys": "cmd+shift+p"}            key combo, shown as a badge in the GIF
 //   {"type": "text", "ms": 70}         type text, one key per `ms`
 //   {"scroll": 1200, "ms": 1500}       wheel-scroll down by that many pixels (negative: up)
@@ -57,7 +57,7 @@ var pos = CGPoint(x: 0, y: 0)
 let screen = { (p: CGPoint) in CGPoint(x: origin.x + p.x, y: origin.y + p.y) }
 let modFlags: [String: CGEventFlags] = ["cmd": .maskCommand, "shift": .maskShift, "alt": .maskAlternate, "ctrl": .maskControl]
 let modSymbols: [(String, String)] = [("ctrl", "⌃"), ("alt", "⌥"), ("shift", "⇧"), ("cmd", "⌘")]
-let keyCodes: [String: (CGKeyCode, String)] = ["p": (35, "P"), "enter": (36, "↩"), "escape": (53, "esc"), "down": (125, "↓")]
+let keyCodes: [String: (CGKeyCode, String)] = ["p": (35, "P"), "z": (6, "Z"), "enter": (36, "↩"), "escape": (53, "esc"), "down": (125, "↓")]
 
 func flags(_ mods: [String]) -> CGEventFlags { mods.reduce(into: CGEventFlags()) { $0.insert(modFlags[$1]!) } }
 
@@ -107,7 +107,9 @@ for step in steps {
         mouse(right ? .rightMouseDown : .leftMouseDown, right ? .right : .left, f)
         usleep(70_000)
         mouse(right ? .rightMouseUp : .leftMouseUp, right ? .right : .left, f)
-        emit(["click": [pos.x, pos.y]])
+        var click: [String: Any] = ["click": [pos.x, pos.y]]
+        if let caption = step["caption"] as? String { click["caption"] = caption }
+        emit(click)
     } else if let combo = step["keys"] as? String {
         let parts = combo.split(separator: "+").map(String.init)
         let mods = Array(parts.dropLast())

@@ -4,9 +4,10 @@
 #   images/command.png                      Command Palette filtered to "Fluid Diff: Git"
 #   images/demo-{preview,ruler}.gif         scrolling the diff; hovering and clicking ruler marks
 #   images/demo-{git,compare,timeline}.gif  one GIF per way of opening Fluid Diff
+#   images/demo-chunks.gif                  revert, undo, stage, and unstage one chunk
 # The narrated videos are make-videos.sh.
 #
-# Usage: scripts/demo/make-images.sh [stills] [preview] [ruler] [git] [compare] [timeline]   (default: all)
+# Usage: scripts/demo/make-images.sh [stills] [preview] [ruler] [git] [compare] [timeline] [chunks]   (default: all)
 #
 # macOS only. Needs: VS Code with the `code` CLI, Xcode command line tools (swift),
 # gifski (`brew install gifski`), python3 with Pillow (`pip install pillow`).
@@ -17,7 +18,7 @@
 # Env overrides: see common.sh.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
-TARGETS=${*:-stills preview ruler git compare timeline}
+TARGETS=${*:-stills preview ruler git compare timeline chunks}
 
 shoot() { # <mode> <out.png>
     launch "$1"
@@ -64,7 +65,7 @@ for target in $TARGETS; do
             shoot diff "$REPO/images/theme-light.png"
             settings "Default Dark Modern" Dark
             ;;
-        preview | ruler | git | compare | timeline) record "$target" ;;
+        preview | ruler | git | compare | timeline | chunks) record "$target" ;;
         *) echo "unknown target: $target" >&2; exit 1 ;;
     esac
 done
