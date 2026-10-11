@@ -32,35 +32,6 @@
       --gap-after: rgba(200, 200, 200, 0.8);
       --gutter: #252526;
     }
-    /* html[data-theme="light"] {
-      --bg: #ffffff;
-      --fg: #333333;
-      --chrome: #f3f3f3;
-      --muted: #6e6e6e;
-      --viewport: rgba(0, 0, 0, 0.12);
-      --viewport-border: #333333;
-      --gap: rgba(80, 80, 80, 0.45);
-      --outline-insert: 30, 140, 60;
-      --outline-delete: 200, 40, 40;
-      --outline-replace: 160, 120, 0;
-      --chunk-insert: rgb(210, 232, 216);
-      --chunk-delete: rgb(244, 212, 212);
-      --chunk-replace: rgb(236, 228, 204);
-      --ruler-mark-insert: rgba(30, 140, 60, 0.7);
-      --ruler-mark-delete: rgba(200, 40, 40, 0.7);
-      --ruler-mark-replace: rgba(190, 140, 0, 0.7);
-      --word-insert: rgba(30, 140, 60, 0.2);
-      --word-delete: rgba(200, 40, 40, 0.2);
-      --word-replace: rgba(190, 140, 0, 0.2);
-      --word-insert-underline: rgba(30, 140, 60, 0.6);
-      --word-delete-underline: rgba(200, 40, 40, 0.6);
-      --word-replace-underline: rgba(160, 120, 0, 0.6);
-      --word-gap-insert: rgb(30, 140, 60);
-      --word-gap-delete: rgb(200, 40, 40);
-      --gap-before: rgba(80, 80, 80, 0.45);
-      --gap-after: rgba(80, 80, 80, 0.45);
-      --gutter: #f3f3f3;
-    } */
     html[data-theme="light"] {
       --bg: #ffffff;
       --fg: #000000;
@@ -222,6 +193,7 @@
     .line {
       height: 20px;
       line-height: 20px;
+      padding-right: 60px;
       background: var(--bg);
     }
 
@@ -312,6 +284,29 @@
       position: relative;
     }
 
+    /* Chunk actions: revert, stage */
+    .chunk-actions-container {
+      position: sticky;
+      left: 0;
+      width: calc(50vw - 40px);
+      height: 0;
+      z-index: 2;
+    }
+    .chunk-actions { 
+      position: absolute;  
+      right: 4px; 
+      height: 18px;
+      display: flex; 
+      justify-content: center; 
+      gap: 4px; 
+      z-index: 2; 
+    }
+    .chunk-actions button { 
+      font: 11px monospace; 
+      padding: 0 4px; 
+      cursor: pointer; 
+    }
+
     canvas {
       position: absolute;
       top: 0;
@@ -352,6 +347,22 @@
     const rootStyle = getComputedStyle(document.documentElement);
     const OUTLINE_COLORS = Object.fromEntries(['insert', 'delete', 'replace'].map(t => [t, rootStyle.getPropertyValue(`--outline-${t}`).trim()]));
     const CHUNK_COLORS = Object.fromEntries(['insert', 'delete', 'replace'].map(t => [t, rootStyle.getPropertyValue(`--chunk-${t}`).trim()]));
+    // Chunk actions: revert, stage
+    const GIT_ACTIONS = Boolean('{{gitActions}}') === true;
+    const vscode = GIT_ACTIONS ? acquireVsCodeApi() : null;
+    const actionContainerEl = document.createElement('div');
+    actionContainerEl.className = 'chunk-actions-container';
+    rightPane.firstElementChild.prepend(actionContainerEl);
+    const actionEls = GIT_ACTIONS ? chunks.map(c => {
+      const el = document.createElement('div');
+      el.className = 'chunk-actions';
+      el.innerHTML = '<button title="Revert chunk">↶</button><button title="Stage chunk">+</button>';
+      el.children[0].onclick = () => vscode.postMessage({ type: 'revert', chunk: c });
+      el.children[1].onclick = () => vscode.postMessage({ type: 'stage', chunk: c });
+      el.style.top = Math.max(-PANE_PAD, c.b0 * LINE_HEIGHT - 18 - 2) + 'px';
+      actionContainerEl.appendChild(el);
+      return el;
+    }) : [];
 
     // Draw ruler marks & viewports
     drawRulerMarks();
@@ -409,7 +420,7 @@
     // chunk-start/gap-before sit just below the boundary, chunk-end/gap-after just above it.
     function edgesOf(pane, s, e) {
       if (s < e) return [yOf(pane, s) + 0.5, yOf(pane, e) - 0.5];
-      const y = yOf(pane, s) + (s < pane.firstElementChild.childElementCount ? 0.5 : -0.5);
+      const y = yOf(pane, s) + (s < pane.querySelectAll('.line').length ? 0.5 : -0.5);
       return [y, y];
     }
 
@@ -418,9 +429,12 @@
       const w = canvas.parentElement.clientWidth;
       const h = canvas.parentElement.clientHeight;
       ctx.clearRect(0, 0, w, h);
-      for (const c of chunks) {
+      for (const [i, c] of chunks.entries()) {
         const [ly0, ly1] = edgesOf(leftPane, c.a0, c.a1);
         const [ry0, ry1] = edgesOf(rightPane, c.b0, c.b1);
+        // Draw the chunk actions buttons
+        // if (actionEls[i]) actionEls[i].style.top = Math.min(ly0, ry0) + 'px';
+        // Skip chunks that are off-screen
         if (Math.max(ly1, ry1) < 0 || Math.min(ly0, ry0) > h) continue;
         const rgb = OUTLINE_COLORS[c.tag];
         ctx.beginPath();

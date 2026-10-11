@@ -138,7 +138,7 @@ export function deactivate() {}
 
 
 // helper function to generate the HTML content for the webview
-async function getWebviewContent(context: vscode.ExtensionContext, textA: string, textB: string, langA: string, langB: string, theme: string, pathA: string, pathB: string): Promise<string> {
+async function getWebviewContent(context: vscode.ExtensionContext, textA: string, textB: string, langA: string, langB: string, theme: string, pathA: string, pathB: string, gitActions: boolean = false): Promise<string> {
     const linesA = textA.split(/\r?\n/);
     const linesB = textB.split(/\r?\n/);
     const chunks = diffLines(linesA, linesB);
@@ -161,12 +161,13 @@ async function getWebviewContent(context: vscode.ExtensionContext, textA: string
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
     // Function replacers: file text may contain `$&`-style patterns that string replacers expand.
     const htmlContent = fs.readFileSync(htmlPath, 'utf8').replace(
-        /\{\{(textA|textB|chunks|theme|pathA|pathB)\}\}/g,
+        /\{\{(textA|textB|chunks|theme|pathA|pathB|gitActions)\}\}/g,
         (token) => token === '{{textA}}' ? renderLines(linesA, chunks, 'a', words.a, coloreToksA)
             : token === '{{textB}}' ? renderLines(linesB, chunks, 'b', words.b, coloreToksB)
             : token === '{{chunks}}' ? JSON.stringify(chunks)
             : token === '{{pathA}}' ? escape(pathA)
             : token === '{{pathB}}' ? escape(pathB)
+            : token === '{{gitActions}}' ? String(gitActions)
             : theme
     );
     return htmlContent;
