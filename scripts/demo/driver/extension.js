@@ -54,7 +54,7 @@ async function activate() {
         } else if (mode === 'diff') {
             await run('fluid-diff.fluidDiffGit');
             await delay(600);
-        } else if (mode === 'gif-preview' || mode === 'gif-ruler' || mode === 'gif-words') {
+        } else if (mode === 'gif-preview' || mode === 'gif-ruler' || mode === 'gif-words' || mode === 'gif-chunks') {
             await run('fluid-diff.fluidDiffGit');
             await delay(1500);
         } else if (mode === 'gif-git' || mode === 'gif-theme') {

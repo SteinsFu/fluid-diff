@@ -8,6 +8,8 @@ export interface Chunk {
     a1: number;
     b0: number;
     b1: number;
+    staged?: boolean;     // the index already holds this whole change
+    hasStaged?: boolean;  // the index differs from HEAD somewhere in this chunk
 }
 
 // Character range [start, end) of a string, with the css class that highlights it.

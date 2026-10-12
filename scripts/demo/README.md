@@ -12,6 +12,7 @@ These scripts regenerate the screenshots and GIFs used in the top-level `README.
 | `images/demo-git.gif` | Command Palette, then **Fluid Diff: Git** |
 | `images/demo-compare.gif` | Explorer selection, right-click, then **Fluid Diff: Compare Selected** |
 | `images/demo-timeline.gif` | Timeline diff, then the **Fluid Diff: From Diff Editor** title-bar icon |
+| `images/demo-chunks.gif` | Revert two chunks, then stage and unstage two more. Each click shows a caption |
 | `videos/clips/*.mp4` | 60 fps recording of every GIF scene, plus `words`, `theme`, `preview-light` and `preview-dracula`, which have no GIF |
 | `videos/fluid-diff-short.mp4` | Vertical 1080×1920 reel at 60 fps, under 60 seconds, with headlines, word-by-word captions and upbeat house music |
 | `videos/fluid-diff-long.mp4` | Horizontal 1920×1080 tour of every feature at 60 fps, over 60 seconds, with chapter titles, subtitles and lo-fi music |
@@ -42,13 +43,13 @@ To redo only some outputs, name them:
 
 ```bash
 scripts/demo/make-images.sh stills              # theme PNGs and command.png
-scripts/demo/make-images.sh git compare         # just these two GIFs
+scripts/demo/make-images.sh git chunks          # just these two GIFs
 scripts/demo/make-videos.sh ruler render      # re-record one clip, then re-cut both videos
 scripts/demo/make-videos.sh preview-light     # records scenes/preview.json in the Light theme
 scripts/demo/make-videos.sh render            # re-cut both videos from the existing clips, no VS Code
 ```
 
-Clip names: `preview`, `ruler`, `git`, `compare`, `timeline`, `words`, `theme`, `preview-light`, `preview-dracula`. The scene is the part before any `-`, and `-light` or `-dracula` picks the theme.
+Clip names: `preview`, `ruler`, `git`, `compare`, `timeline`, `chunks`, `words`, `theme`, `preview-light`, `preview-dracula`. The scene is the part before any `-`, and `-light` or `-dracula` picks the theme.
 
 While it runs, don't touch the mouse or keyboard, and don't switch apps. Stage Manager shrinks the demo window if it loses focus.
 
@@ -102,7 +103,7 @@ Each scene in `scenes/` is a list of steps. Coordinates are in points, measured 
 | --- | --- |
 | `{"at": [x, y]}` | Put the cursor at a position without animating |
 | `{"move": [x, y], "ms": 600}` | Glide the cursor to a position |
-| `{"click": "left"}` or `{"click": "right", "mods": ["cmd"]}` | Click, optionally holding modifier keys |
+| `{"click": "left"}` or `{"click": "right", "mods": ["cmd"]}` | Click, optionally holding modifier keys. `caption` draws a badge, same as `keys` |
 | `{"keys": "cmd+shift+p"}` | Press a shortcut. The GIF shows it as a badge |
 | `{"type": "Fluid Diff: Git", "ms": 75}` | Type text, `ms` per character |
 | `{"scroll": 1100, "ms": 2000}` | Scroll down by that many pixels at the cursor. Negative scrolls up |

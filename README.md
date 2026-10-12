@@ -46,6 +46,28 @@ Intuitive Diff UI · Aligned panes · Word-level highlights
   <img src="images/demo-git.gif" alt="Open the Command Palette, run Fluid Diff: Git, and read the diff" width="820">
 </p>
 
+### Stage, unstage, and revert chunks
+
+In **Fluid Diff: Git**, each changed chunk has buttons at the right edge of the right pane, just above the chunk.
+
+| Button | What it does |
+| --- | --- |
+| ↶ Revert | Replaces the chunk in the editor buffer with its `HEAD` version. The file is not saved. |
+| + Stage | Stages only this chunk, like picking one hunk in `git add -p`. The file on disk is not touched. |
+| − Unstage | Removes this chunk from the staging area. Other staged chunks stay staged. |
+
+- Staged chunks are faded and drawn with dashed outlines, so unstaged work stands out. The left pane still shows `HEAD`, so a staged chunk stays visible until you commit it.
+- Staging uses the editor buffer, so unsaved edits can be staged. The file's line endings and executable bit are kept.
+- Revert is disabled on a chunk that is partly or fully staged. Unstage it first.
+- Press `Ctrl+Z` (`Cmd+Z` on macOS) in the panel to undo the last revert. If you edited the file after that revert, use undo in the editor instead.
+- The view refreshes after every action and whenever you switch back to its tab, and keeps your scroll position.
+
+<p align="center">
+  <img src="images/demo-chunks.gif" alt="Revert two chunks, then stage and unstage two more" width="820">
+  <br>
+  <em>Revert two chunks, then stage and unstage two more.</em>
+</p>
+
 ### Selected files
 
 1. In the Explorer, select exactly two files.
@@ -115,6 +137,7 @@ The theme applies to diff panels opened after the change.
 - **Word highlights.** Inside replaced lines, the exact changed words are marked.
 - **Syntax coloring.** Each pane uses the language of its own file.
 - **Overview scrollbar rulers.** A ruler beside each pane maps that whole file. Green marks inserts, red marks deletes, and yellow marks replacements. A translucent box shows the visible window. Click a ruler to jump that pane to the clicked spot.
+- **Chunk actions.** In Git diffs, stage, unstage, or revert a single chunk from the diff view.
 - **Compare any two selected files.** Pick two files in the Explorer and open them side by side. This command reads the two files directly.
 - **Reopen any VS Code diff.** From a built-in single-file diff, such as a past commit in the Timeline view, reopen the same two sides in Fluid Diff.
 - **Themes.** Auto, Light, Dark, and Dracula. Auto follows the VS Code color theme.
@@ -134,6 +157,13 @@ These messages come from **Fluid Diff: Git**. If a check fails, the panel stays 
 | file is not in a git repository | Open a file inside a Git repository |
 | No git HEAD version of the file | Commit the file once, then retry |
 
+These messages come from the chunk buttons. The panel stays open.
+
+| Message says | Meaning |
+| --- | --- |
+| File changed since render; view refreshed | The file changed after the view was drawn, so the button's chunk no longer exists. Click the button again in the refreshed view |
+| File was edited after the revert | `Ctrl+Z` in the panel won't overwrite later edits. Use undo in the editor instead |
+
 ## Roadmap
 
 - [x] Compare the active file with its `HEAD` version
@@ -141,9 +171,9 @@ These messages come from **Fluid Diff: Git**. If a check fails, the panel stays 
 - [x] Overview scrollbar ruler
 - [x] Themes: Auto, Light, Dark, Dracula
 - [x] Reopen a built-in single-file diff
+- [x] Stage, unstage, and revert single chunks in Git diffs
 - [ ] Open changes from git graph
 - [ ] Diffing in Markdown preview
-- [ ] For git diff, add cherry pick featuers (stage and revert buttons) for each code chunk
 
 ## Limits
 
@@ -162,4 +192,4 @@ npm test          # compile, lint, then run tests
 
 Press `F5` in VS Code to start an Extension Development Host with Fluid Diff loaded.
 
-To refresh the README images after a UI change, run `scripts/demo/make-images.sh` on macOS, or pass `stills`, `git`, `compare`, or `timeline` to redo only some of them. See [`scripts/demo/README.md`](scripts/demo/README.md) for requirements. The GIF click positions live in `scripts/demo/scenes/`.
+To refresh the README images after a UI change, run `scripts/demo/make-images.sh` on macOS, or pass `stills`, `git`, `chunks`, `compare`, or `timeline` to redo only some of them. See [`scripts/demo/README.md`](scripts/demo/README.md) for requirements. The GIF click positions live in `scripts/demo/scenes/`.

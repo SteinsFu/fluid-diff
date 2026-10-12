@@ -32,35 +32,6 @@
       --gap-after: rgba(200, 200, 200, 0.8);
       --gutter: #252526;
     }
-    /* html[data-theme="light"] {
-      --bg: #ffffff;
-      --fg: #333333;
-      --chrome: #f3f3f3;
-      --muted: #6e6e6e;
-      --viewport: rgba(0, 0, 0, 0.12);
-      --viewport-border: #333333;
-      --gap: rgba(80, 80, 80, 0.45);
-      --outline-insert: 30, 140, 60;
-      --outline-delete: 200, 40, 40;
-      --outline-replace: 160, 120, 0;
-      --chunk-insert: rgb(210, 232, 216);
-      --chunk-delete: rgb(244, 212, 212);
-      --chunk-replace: rgb(236, 228, 204);
-      --ruler-mark-insert: rgba(30, 140, 60, 0.7);
-      --ruler-mark-delete: rgba(200, 40, 40, 0.7);
-      --ruler-mark-replace: rgba(190, 140, 0, 0.7);
-      --word-insert: rgba(30, 140, 60, 0.2);
-      --word-delete: rgba(200, 40, 40, 0.2);
-      --word-replace: rgba(190, 140, 0, 0.2);
-      --word-insert-underline: rgba(30, 140, 60, 0.6);
-      --word-delete-underline: rgba(200, 40, 40, 0.6);
-      --word-replace-underline: rgba(160, 120, 0, 0.6);
-      --word-gap-insert: rgb(30, 140, 60);
-      --word-gap-delete: rgb(200, 40, 40);
-      --gap-before: rgba(80, 80, 80, 0.45);
-      --gap-after: rgba(80, 80, 80, 0.45);
-      --gutter: #f3f3f3;
-    } */
     html[data-theme="light"] {
       --bg: #ffffff;
       --fg: #000000;
@@ -222,6 +193,7 @@
     .line {
       height: 20px;
       line-height: 20px;
+      padding-right: 60px;
       background: var(--bg);
     }
 
@@ -252,9 +224,9 @@
     .chunk-replace { background: var(--chunk-replace); --outline: var(--outline-replace); }
 
     /* Chunk outlines: top edge of first line, bottom edge of last line, matching the gutter curves */
-    .chunk-start { box-shadow: inset 0 1px 0 rgb(var(--outline)); }
-    .chunk-end { box-shadow: inset 0 -1px 0 rgb(var(--outline)); }
-    .chunk-start.chunk-end { box-shadow: inset 0 1px 0 rgb(var(--outline)), inset 0 -1px 0 rgb(var(--outline)); }
+    .chunk-start { box-shadow: inset 0 1px 0 rgba(var(--outline), var(--outline-alpha, 1)); }
+    .chunk-end { box-shadow: inset 0 -1px 0 rgba(var(--outline), var(--outline-alpha, 1)); }
+    .chunk-start.chunk-end { box-shadow: inset 0 1px 0 rgba(var(--outline), var(--outline-alpha, 1)), inset 0 -1px 0 rgba(var(--outline), var(--outline-alpha, 1)); }
     
     /* The word highlights */
     .word-insert, .word-delete, .word-replace {
@@ -312,6 +284,68 @@
       position: relative;
     }
 
+    /* Chunk actions: revert, stage */
+    .chunk-actions-container {
+      position: sticky;
+      left: 0;
+      width: calc(50vw - 40px);
+      height: 0;
+      z-index: 2;
+    }
+    .chunk-actions { 
+      position: absolute;  
+      right: 4px; 
+      height: 18px;
+      display: flex; 
+      justify-content: center; 
+      gap: 4px; 
+      z-index: 2; 
+    }
+    .chunk-actions button { 
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 18px;
+      padding: 0;
+      border: 1px solid var(--gap);
+      border-radius: 4px;
+      background: var(--chrome);
+      color: var(--btn-color);
+      cursor: pointer; 
+    }
+    .chunk-actions button:hover:not(:disabled) {
+      border-color: var(--btn-color);
+      background: color-mix(in srgb, var(--btn-color) 20%, var(--chrome));
+    }
+    .chunk-actions button:disabled { opacity: 0.35; cursor: default; }
+    .chunk-actions .revert { --btn-color: rgb(var(--outline-delete)); }
+    .chunk-actions .stage { --btn-color: rgb(var(--outline-insert)); }
+    .chunk-actions .unstage { --btn-color: var(--muted); }
+    .chunk-actions svg {
+      width: 12px;
+      height: 12px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    
+    /* Staged chunks: faded fill, dashed outlines. STAGED_FILL and STAGED_OUTLINE in the script must match. */
+    .staged { 
+      --outline-alpha: 0.5; 
+      --dash: repeating-linear-gradient(90deg, rgba(var(--outline), var(--outline-alpha)) 0 3px, transparent 3px 6px);
+    }
+    .staged.chunk-insert  { background-color: color-mix(in srgb, var(--chunk-insert) 25%, var(--bg)); }
+    .staged.chunk-delete  { background-color: color-mix(in srgb, var(--chunk-delete) 25%, var(--bg)); }
+    .staged.chunk-replace { background-color: color-mix(in srgb, var(--chunk-replace) 25%, var(--bg)); }
+    /* box-shadow can't be dashed, so draw the edges as 1px gradient strips */
+    .staged.chunk-start, .staged.chunk-end { box-shadow: none; background-repeat: no-repeat; background-size: 100% 1px; }
+    .staged.chunk-start { background-image: var(--dash); background-position: top; }
+    .staged.chunk-end { background-image: var(--dash); background-position: bottom; }
+    .staged.chunk-start.chunk-end { background-image: var(--dash), var(--dash); background-position: top, bottom; }
+
     canvas {
       position: absolute;
       top: 0;
@@ -352,6 +386,46 @@
     const rootStyle = getComputedStyle(document.documentElement);
     const OUTLINE_COLORS = Object.fromEntries(['insert', 'delete', 'replace'].map(t => [t, rootStyle.getPropertyValue(`--outline-${t}`).trim()]));
     const CHUNK_COLORS = Object.fromEntries(['insert', 'delete', 'replace'].map(t => [t, rootStyle.getPropertyValue(`--chunk-${t}`).trim()]));
+    // Chunk actions: revert, stage
+    const HAS_GIT_ACTIONS = JSON.parse('{{hasGitActions}}');  // boolean
+    const vscode = HAS_GIT_ACTIONS ? acquireVsCodeApi() : null;
+    // Same symbols as VS Code's Source Control view: discard arrow, plus, minus
+    const ICONS = {
+      revert: '<svg viewBox="0 0 16 16"><path d="M4 6h6a3 3 0 0 1 0 6H7M6.5 3.5 4 6l2.5 2.5"/></svg>',
+      stage: '<svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>',
+      unstage: '<svg viewBox="0 0 16 16"><path d="M3 8h10"/></svg>',
+    };
+    const STAGED_FILL = 0.25, STAGED_OUTLINE = 0.5;
+    const actionContainerEl = document.createElement('div');
+    actionContainerEl.className = 'chunk-actions-container';
+    if (HAS_GIT_ACTIONS) rightPane.firstElementChild.prepend(actionContainerEl);
+    const actionEls = HAS_GIT_ACTIONS ? chunks.map(c => {
+      const el = document.createElement('div');
+      el.className = 'chunk-actions';
+      const stageType = c.staged ? 'unstage' : 'stage';
+      el.innerHTML = `<button class="revert" title="Revert chunk">${ICONS.revert}</button>`
+        + `<button class="${stageType}" title="${c.staged ? 'Unstage' : 'Stage'} chunk">${ICONS[stageType]}</button>`;
+      const [revertBtn, stageBtn] = el.children;
+      revertBtn.disabled = !!c.hasStaged; // reverting the buffer would leave the staged part invisible in the index
+      revertBtn.onclick = () => send({ type: 'revert', chunk: c });
+      stageBtn.onclick = () => send({ type: stageType, chunk: c });
+      el.style.top = Math.max(-PANE_PAD, c.b0 * LINE_HEIGHT - 18 - 1) + 'px';
+      actionContainerEl.appendChild(el);
+      return el;
+    }) : [];
+    // The extension re-renders the whole page after an action or tab switch; webview state survives that reload.
+    const saveScroll = () => vscode?.setState({ top: rightPane.scrollTop, left: rightPane.scrollLeft });
+    function send(msg) {
+      saveScroll();
+      vscode.postMessage(msg);
+    }
+    // Ctrl/Cmd+Z undoes the last revert button click; the extension owns that history
+    if (HAS_GIT_ACTIONS) window.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        send({ type: 'undo' });
+      }
+    });
 
     // Draw ruler marks & viewports
     drawRulerMarks();
@@ -409,7 +483,7 @@
     // chunk-start/gap-before sit just below the boundary, chunk-end/gap-after just above it.
     function edgesOf(pane, s, e) {
       if (s < e) return [yOf(pane, s) + 0.5, yOf(pane, e) - 0.5];
-      const y = yOf(pane, s) + (s < pane.firstElementChild.childElementCount ? 0.5 : -0.5);
+      const y = yOf(pane, s) + (s < pane.querySelectorAll('.line').length ? 0.5 : -0.5);
       return [y, y];
     }
 
@@ -418,9 +492,12 @@
       const w = canvas.parentElement.clientWidth;
       const h = canvas.parentElement.clientHeight;
       ctx.clearRect(0, 0, w, h);
-      for (const c of chunks) {
+      for (const [i, c] of chunks.entries()) {
         const [ly0, ly1] = edgesOf(leftPane, c.a0, c.a1);
         const [ry0, ry1] = edgesOf(rightPane, c.b0, c.b1);
+        // Draw the chunk actions buttons
+        // if (actionEls[i]) actionEls[i].style.top = Math.min(ly0, ry0) + 'px';
+        // Skip chunks that are off-screen
         if (Math.max(ly1, ry1) < 0 || Math.min(ly0, ry0) > h) continue;
         const rgb = OUTLINE_COLORS[c.tag];
         ctx.beginPath();
@@ -430,7 +507,11 @@
         ctx.bezierCurveTo(w / 2, ry1, w / 2, ly1, 0, ly1);
         ctx.closePath();
         ctx.fillStyle = CHUNK_COLORS[c.tag];
+        // Staged chunks are faded with dashed edges; set for every chunk since ctx keeps them
+        ctx.globalAlpha = c.staged ? STAGED_FILL : 1;
+        ctx.setLineDash(c.staged ? [3, 3] : []);
         ctx.fill();
+        ctx.globalAlpha = c.staged ? STAGED_OUTLINE : 1;
         // Stroke only the top and bottom curves. The left and right edges stay unstroked.
         ctx.beginPath();
         ctx.moveTo(0, ly0);
@@ -517,6 +598,7 @@
         drawPending = false; 
         drawConnections(); 
         drawRulerViewports();
+        saveScroll();
       });
     }
     leftPane.addEventListener('scroll', () => syncFrom(leftPane, rightPane, 0));
@@ -537,6 +619,12 @@
       if (rightRuler.hasPointerCapture(e.pointerId)) jumpTo(e, rightRuler, rightPane);
     });
     window.addEventListener('resize', resizeCanvas);
+    // Restore the position saved by send(); the scroll listener above syncs the left pane.
+    const saved = vscode?.getState();
+    if (saved) {
+      rightPane.scrollTop = saved.top;
+      rightPane.scrollLeft = saved.left;
+    }
     setTimeout(resizeCanvas, 100);
   </script>
 </body>
