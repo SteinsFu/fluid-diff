@@ -8,7 +8,7 @@
 
 Intuitive Diff UI · Aligned panes · Word-level highlights
 
-[![Version](https://vsmarketplacebadges.dev/version-short/steinsfu.fluid-diff.svg)](https://marketplace.visualstudio.com/items?itemName=steinsfu.fluid-diff) [![Installs](https://vsmarketplacebadges.dev/installs-short/steinsfu.fluid-diff.svg)](https://marketplace.visualstudio.com/items?itemName=steinsfu.fluid-diff) [![Rating](https://vsmarketplacebadges.dev/rating-short/steinsfu.fluid-diff.svg)](https://marketplace.visualstudio.com/items?itemName=steinsfu.fluid-diff&ssr=false#review-details) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/SteinsFu/fluid-diff?style=flat)](https://github.com/SteinsFu/fluid-diff)
+[![Version](https://vsmarketplacebadges.dev/version-short/steinsfu.fluid-diff.svg)](https://marketplace.visualstudio.com/items?itemName=steinsfu.fluid-diff) [![Installs](https://vsmarketplacebadges.dev/installs-short/steinsfu.fluid-diff.svg)](https://marketplace.visualstudio.com/items?itemName=steinsfu.fluid-diff) [![Open VSX installs](https://img.shields.io/open-vsx/dt/steinsfu/fluid-diff?label=Open%20VSX%20installs)](https://open-vsx.org/extension/steinsfu/fluid-diff) [![Rating](https://vsmarketplacebadges.dev/rating-short/steinsfu.fluid-diff.svg)](https://marketplace.visualstudio.com/items?itemName=steinsfu.fluid-diff&ssr=false#review-details) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/SteinsFu/fluid-diff?style=flat)](https://github.com/SteinsFu/fluid-diff)
 
 <img src="images/theme-dark.png" alt="Side-by-side Fluid Diff in VS Code" width="820">
 
