@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Now provide the implementation of the command with registerCommand
     // The commandId parameter must match the command field in package.json
 
-    // Command 1: Open Fluid Diff: Git
+    // ===== Command 1: Open Fluid Diff: Git =====
     const fluidDiffGitDisposable = vscode.commands.registerCommand('fluid-diff.fluidDiffGit', async () => {
 
         const activeEditor = vscode.window.activeTextEditor;
@@ -134,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
         // );
     });
 
-    // Command 2: Compare Selected
+    // ===== Command 2: Compare Selected =====
     const fluidDiffSelectedDisposable = vscode.commands.registerCommand('fluid-diff.fluidDiffSelected', async (uri, uris?: vscode.Uri[]) => {
         if (!uris || uris.length !== 2) return;
 
@@ -160,7 +160,7 @@ export function activate(context: vscode.ExtensionContext) {
         panel.webview.html = await getWebviewContent(context, doc1.getText(), doc2.getText(), lang1, lang2, theme, doc1.fileName, doc2.fileName);
     });
 
-    // Command 3: Select Theme
+    // ===== Command 3: Select Theme =====
     const selectThemeDisposable = vscode.commands.registerCommand('fluid-diff.selectTheme', async () => {
         const theme = await vscode.window.showQuickPick(THEMES, {
             placeHolder: 'Select a theme',
@@ -170,7 +170,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    // Command 4: From Diff Editor
+    // ===== Command 4: From Diff Editor =====
     const fromDiffEditorDisposable = vscode.commands.registerCommand('fluid-diff.fromDiffEditor', async () => {
         const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
         if (input instanceof vscode.TabInputTextDiff) {
