@@ -15,5 +15,5 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
-!src/webview/*.html
+!src/webview/*
 videos/**

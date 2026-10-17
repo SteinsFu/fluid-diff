@@ -19,8 +19,7 @@
     "changes",
     "word diff",
     "aligned diff",
-    "visual diff",
-    "code review"
+    "visual diff"
   ],
   "version": "1.1.1",
   "publisher": "steinsfu",
@@ -101,7 +100,7 @@
             "Dracula"
           ],
           "default": "Auto",
-          "description": "Color theme for the Fluid Diff view. Auto chooses light or dark theme based on the VS Code theme.."
+          "description": "Color theme for the Fluid Diff view. Auto chooses light or dark theme based on the VS Code theme."
         }
       }
     }

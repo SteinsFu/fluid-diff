@@ -4,22 +4,16 @@ import * as os from 'os';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
 
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
 import * as vscode from 'vscode';
 import { diffBlock, diffLines, diffWords } from '../diff';
-import { copyToIndex, getWebviewContent, revertChunk, undoRevert, RevertHistory } from '../extension';
+import { getWebviewContent } from '../render';
+import { copyToIndex, revertChunk, undoRevert, RevertHistory } from '../git';
 
 const ext = () => vscode.extensions.all.find(e => e.packageJSON.name === 'fluid-diff')!;
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
     suiteSetup(() => ext().activate());
-
-    test('Sample test', () => {
-        assert.strictEqual(-1, [1, 2, 3].indexOf(5));
-        assert.strictEqual(-1, [1, 2, 3].indexOf(0));
-    });
 
     test('diffLines chunks', () => {
         assert.deepStrictEqual(diffLines(['a', 'b', 'c'], ['a', 'b', 'c']), []);
@@ -68,19 +62,24 @@ suite('Extension Test Suite', () => {
 });
 
 suite('Webview content', () => {
-    const context = () => ({ extensionPath: ext().extensionPath }) as vscode.ExtensionContext;
+    const side = (text: string, lang: string, path: string) => ({ text, lang, path });
 
     test('compare mode: no git actions, every placeholder filled', async () => {
-        const html = await getWebviewContent(context(), 'a\nb', 'a\nB', 'plaintext', 'plaintext', 'dark', 'old.txt', 'new.txt');
-        assert.ok(html.includes(`JSON.parse('false')`));
+        const html = await getWebviewContent(side('a\nb', 'plaintext', 'old.txt'), side('a\nB', 'plaintext', 'new.txt'), 'dark');
+        assert.ok(html.includes('"hasGitActions":false'));
         assert.ok(!html.includes('"staged"'));
         assert.ok(!/\{\{\w+\}\}/.test(html));
+        // CSP: only our own scripts run, never scripts inside rendered markdown
+        const nonce = html.match(/script-src 'nonce-([^']+)'/)?.[1];
+        assert.ok(nonce);
+        assert.strictEqual(html.match(/<script\b/g)?.length, html.split(`<script nonce="${nonce}">`).length - 1);
     });
 
     test('git mode: chunks already in the index are marked staged', async () => {
         // b->B is fully in the index; d->D is only partly staged (the index holds an intermediate x)
-        const html = await getWebviewContent(context(), 'a\nb\nc\nd\ne\nf', 'a\nB\nc\nD\ne\nF', 'plaintext', 'plaintext', 'dark', 'f (HEAD)', 'f', 'a\nB\nc\nx\ne\nf');
-        assert.ok(html.includes(`JSON.parse('true')`));
+        const html = await getWebviewContent(side('a\nb\nc\nd\ne\nf', 'plaintext', 'f (HEAD)'), side('a\nB\nc\nD\ne\nF', 'plaintext', 'f'), 'dark',
+            { indexText: 'a\nB\nc\nx\ne\nf' });
+        assert.ok(html.includes('"hasGitActions":true'));
         assert.ok(html.includes('"a0":1,"a1":2,"b0":1,"b1":2,"staged":true,"hasStaged":true'));
         assert.ok(html.includes('"a0":3,"a1":4,"b0":3,"b1":4,"staged":false,"hasStaged":true'));
         assert.ok(html.includes('"a0":5,"a1":6,"b0":5,"b1":6,"staged":false,"hasStaged":false'));
@@ -90,15 +89,17 @@ suite('Webview content', () => {
 
     test('preview mode: rendered markdown with block line numbers and blank-trimmed chunks', async () => {
         // inserted paragraph plus its blank line: the display range drops the blank line
-        const html = await getWebviewContent(context(), '# T\n\nend', '# T\n\nnew\n\nend', 'markdown', 'markdown', 'dark', 'a.md', 'b.md',
-            undefined, true, 'https://base/');
+        const html = await getWebviewContent(side('# T\n\nend', 'markdown', 'a.md'), side('# T\n\nnew\n\nend', 'markdown', 'b.md'), 'dark',
+            { preview: true, baseHref: 'https://base/' });
         assert.ok(html.includes('data-mode="preview"'));
         assert.ok(html.includes('<base href="https://base/">'));
         assert.ok(/<h1[^>]*data-line="0"/.test(html));
         assert.ok(html.includes('<div data-line="5"></div>'));  // end-of-file marker on the new side
-        assert.ok(html.includes('exports.diffBlock = diffBlock'));  // word marks run diffBlock in the webview        assert.ok(html.includes('"a0":2,"a1":2,"b0":2,"b1":4,"va0":2,"va1":2,"vb0":2,"vb1":3'));
+        assert.ok(html.includes('exports.diffBlock = diffBlock'));  // word marks run diffBlock in the webview
+        assert.ok(html.includes('"a0":2,"a1":2,"b0":2,"b1":4,"va0":2,"va1":2,"vb0":2,"vb1":3'));
         assert.ok(!/\{\{\w+\}\}/.test(html));
-    });});
+    });
+});
 
 suite('Git chunk actions', () => {
     let dir = '';

@@ -19,6 +19,10 @@ export interface Chunk {
 // Character range [start, end) of a string, with the css class that highlights it.
 export type WordMark = [start: number, end: number, cls: string];
 
+type Similarity = (x: string, y: string) => number;
+
+export const splitLines = (text: string) => text.split(/\r?\n/);
+
 const WORDS = /[\p{L}\p{N}_]+/gu;
 // newline is its own token so block diffs can match text across line breaks
 const TOKENS = /[\p{L}\p{N}_]+|\n|[^\S\n]+|[^\p{L}\p{N}_\s]/gu;
@@ -27,7 +31,7 @@ const HAS_WORD = /[\p{L}\p{N}_]/u;
 // Dice overlap of word multisets, 0 below a 0.5 cutoff; ignores word order.
 // Punctuation only counts when a line has no words: comparing all tokens pairs unrelated lines,
 // e.g. "foo(a, b)" vs "bar(c, d)" share "(", ",", " ", ")".
-function lineSimilarity(): (x: string, y: string) => number {
+function lineSimilarity(): Similarity {
     const cache = new Map<string, [words: string[], tokens: string[]]>();
     const bags = (s: string) => {
         let v = cache.get(s);
@@ -90,7 +94,7 @@ function uniqueAnchors(a: string[], b: string[], a0: number, a1: number, b0: num
 // score 1 and similar items score their similarity. Similar pairs steer which equal items get matched
 // (so "def apply_tax(...)" lines up with its edited version) but only equal pairs are pushed to out.
 function alignGap(a: string[], b: string[], a0: number, a1: number, b0: number, b1: number,
-    out: [number, number][], similar?: (x: string, y: string) => number) {
+    out: [number, number][], similar?: Similarity) {
     const n = a1 - a0, m = b1 - b0;
     // O(n*m) table; a gap this large between unique anchors becomes one replace chunk.
     if (n * m > 25_000_000) { return; }
@@ -126,7 +130,7 @@ function alignGap(a: string[], b: string[], a0: number, a1: number, b0: number, 
 
 // Pushes the equal pairs of a[a0:a1] and b[b0:b1] to out, in order.
 function align(a: string[], b: string[], a0: number, a1: number, b0: number, b1: number,
-    out: [number, number][], similar?: (x: string, y: string) => number) {
+    out: [number, number][], similar?: Similarity) {
     while (a0 < a1 && b0 < b1 && a[a0] === b[b0]) { out.push([a0++, b0++]); }
     const tail: [number, number][] = [];
     while (a1 > a0 && b1 > b0 && a[a1 - 1] === b[b1 - 1]) { tail.push([--a1, --b1]); }
@@ -144,7 +148,7 @@ function align(a: string[], b: string[], a0: number, a1: number, b0: number, b1:
 }
 
 // Runs of unmatched items between equal pairs.
-function toChunks(a: string[], b: string[], similar?: (x: string, y: string) => number): Chunk[] {
+function toChunks(a: string[], b: string[], similar?: Similarity): Chunk[] {
     const matches: [number, number][] = [];
     align(a, b, 0, a.length, 0, b.length, matches, similar);
     matches.push([a.length, b.length]);
