@@ -162,11 +162,12 @@ function drawBands(pane, side) {
     lines.prepend(b);
   }
 }
-// Text nodes of block el, minus those inside nested blocks: a list item's own text without its sub-list
+// Text nodes of block el, minus those inside nested blocks: a list item's own text without its sub-list.
+// KaTeX math is skipped too: spans inserted into its absolutely positioned glyphs break the layout.
 function ownTextNodes(el) {
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
     acceptNode: n => n.nodeType === Node.TEXT_NODE ? NodeFilter.FILTER_ACCEPT
-      : n.hasAttribute('data-line') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP,
+      : n.hasAttribute('data-line') || n.classList.contains('katex') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP,
   });
   const nodes = [];
   for (let n; (n = walker.nextNode());) nodes.push(n);
@@ -347,8 +348,10 @@ function syncTo(src, dst, from) {
 // One listener for the whole view. The pointer's half picks the driver pane; the other
 // pane follows through the line map. Native wheel is blocked so both panes and the canvas
 // update in the same frame, instead of the compositor painting the panes a frame ahead.
+// Inner scrollers (a wide equation, a code block) keep native wheel scrolling while they can move along it.
 let wheel = null;
 window.addEventListener('wheel', e => {
+  if (innerScroller(e)) return;
   e.preventDefault();
   const fromLeft = e.clientX < window.innerWidth / 2;
   const src = fromLeft ? leftPane : rightPane;
@@ -363,6 +366,19 @@ window.addEventListener('wheel', e => {
   wheel.dx += e.deltaX * k;
   wheel.dy += e.deltaY * k;
 }, { capture: true, passive: false });
+// The element under the pointer, below the panes, that can still scroll along the wheel's main axis
+function innerScroller(e) {
+  const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+  const d = horizontal ? e.deltaX : e.deltaY;
+  for (let el = e.target.closest?.('.pane *'); el && !el.classList.contains('pane'); el = el.parentElement) {
+    const style = getComputedStyle(el);
+    const [pos, size, view, overflow] = horizontal
+      ? [el.scrollLeft, el.scrollWidth, el.clientWidth, style.overflowX]
+      : [el.scrollTop, el.scrollHeight, el.clientHeight, style.overflowY];
+    if (/auto|scroll/.test(overflow) && size > view && (d < 0 ? pos > 0 : pos + view < size - 1)) return el;
+  }
+  return null;
+}
 function applyWheel() {
   const { src, dst, from, dx, dy } = wheel;
   wheel = null;

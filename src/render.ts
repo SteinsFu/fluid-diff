@@ -16,6 +16,7 @@ export interface RenderOptions {
     indexText?: string;   // git index content: enables Git mode (revert/stage buttons, staged marks)
     preview?: boolean;    // render markdown instead of raw lines, if both sides are markdown
     baseHref?: string;    // resolves relative links and images in the markdown preview
+    mathCss?: string;     // KaTeX stylesheet for math in the markdown preview
     cspSource?: string;   // webview.cspSource, allowed to serve images and styles
 }
 
@@ -41,6 +42,7 @@ export async function getWebviewContent(a: Side, b: Side, theme: string, opts: R
         nonce: randomBytes(16).toString('base64'),
         cspSource: opts.cspSource ?? '',
         baseHref: opts.baseHref ?? '',
+        mathStyle: preview && opts.mathCss ? `<link rel="stylesheet" href="${escapeHtml(opts.mathCss)}">` : '',
         pathA: escapeHtml(a.path),
         pathB: escapeHtml(b.path),
         textA: htmlA,
@@ -89,9 +91,39 @@ async function renderPreview(linesA: string[], linesB: string[], chunks: Chunk[]
     return Promise.all([renderMarkdown(linesA), renderMarkdown(linesB)]);
 }
 
-const renderMarkdown = async (lines: string[]) =>
-    await vscode.commands.executeCommand<string>('markdown.api.render', lines.join('\n'))
-    + `<div data-line="${lines.length}"></div>`;  // end-of-file marker
+async function renderMarkdown(lines: string[]) {
+    const tex = texMath(lines);
+    let html = await vscode.commands.executeCommand<string>('markdown.api.render', tex.lines.join('\n'));
+    // The math plugin renders display math without the data-line that maps blocks to source lines; each
+    // `$$` pair opens one, in order. On a count mismatch (e.g. an escaped `\$$`) blocks stay untagged.
+    const opens = tex.dollars.filter((_, i) => i % 2 === 0);
+    if (html.split('<p class="katex-block"').length - 1 === opens.length) {
+        let k = 0;
+        html = html.replace(/<p class="katex-block"/g, m => `${m} data-line="${opens[k++]}"`);
+    }
+    return html + `<div data-line="${lines.length}"></div>`;  // end-of-file marker
+}
+
+// LaTeX delimiters `\[ \]` and `\( \)` as the `$$` and `$` the math plugin reads (markdown takes `\[` as an
+// escaped `[`). Only columns shift, so block line numbers stay put. Fenced code and inline code are left alone.
+// Also returns the line of every `$$` in the result.
+const TEX_DELIMS: Record<string, string> = { '\\[': '$$', '\\]': '$$', '\\(': '$', '\\)': '$' };
+function texMath(lines: string[]): { lines: string[]; dollars: number[] } {
+    let fence = '';
+    const dollars: number[] = [];
+    const out = lines.map((line, i) => {
+        const f = line.match(/^\s*(`{3,}|~{3,})/)?.[1];
+        if (f && !fence) { fence = f; return line; }
+        if (fence) {
+            if (f && f[0] === fence[0] && f.length >= fence.length) { fence = ''; }
+            return line;
+        }
+        line = line.replace(/(`+).*?\1|(?<!\\)\\[[\]()]/g, m => TEX_DELIMS[m] ?? m);
+        for (const m of line.matchAll(/(`+).*?\1|\$\$/g)) { if (m[0] === '$$') { dollars.push(i); } }
+        return line;
+    });
+    return { lines: out, dollars };
+}
 
 // Display range of lines [s, e) without its leading and trailing blank lines
 function trimBlank(lines: string[], s: number, e: number): [number, number] {

@@ -105,14 +105,20 @@ async function showPanel(
     load: () => Promise<{ a: Side; b: Side; indexText?: string }>,
     onAction?: (msg: Message) => Promise<void>,
 ) {
-    const panel = vscode.window.createWebviewPanel('fluidDiff', title, vscode.ViewColumn.One, { enableScripts: true });
+    // KaTeX stylesheet and fonts of the built-in math extension, whose markdown-it plugin renders math in the preview
+    const mathExt = vscode.extensions.getExtension('vscode.markdown-math')?.extensionUri;
+    const panel = vscode.window.createWebviewPanel('fluidDiff', title, vscode.ViewColumn.One, {
+        enableScripts: true,
+        localResourceRoots: [...(vscode.workspace.workspaceFolders ?? []).map(f => f.uri), ...(mathExt ? [mathExt] : [])],
+    });
     const baseHref = panel.webview.asWebviewUri(vscode.Uri.file(path.dirname(baseFile))) + '/';
+    const mathCss = mathExt && panel.webview.asWebviewUri(vscode.Uri.joinPath(mathExt, 'notebook-out', 'katex.min.css')).toString();
     let preview = false;
 
     const render = async () => {
         const { a, b, indexText } = await load();
         panel.webview.html = await getWebviewContent(a, b, getTheme(),
-            { indexText, preview, baseHref, cspSource: panel.webview.cspSource });
+            { indexText, preview, baseHref, mathCss, cspSource: panel.webview.cspSource });
     };
 
     panel.onDidChangeViewState(() => {

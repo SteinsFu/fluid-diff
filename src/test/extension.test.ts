@@ -99,6 +99,22 @@ suite('Webview content', () => {
         assert.ok(html.includes('"a0":2,"a1":2,"b0":2,"b1":4,"va0":2,"va1":2,"vb0":2,"vb1":3'));
         assert.ok(!/\{\{\w+\}\}/.test(html));
     });
+
+    test('preview mode: math renders with KaTeX and its stylesheet', async () => {
+        const md = side('$$E=mc^2$$\n\ninline $x^2$', 'markdown', 'a.md');
+        const html = await getWebviewContent(md, md, 'dark', { preview: true, mathCss: 'https://base/katex.min.css' });
+        assert.ok(html.includes('<link rel="stylesheet" href="https://base/katex.min.css">'));
+        assert.ok(html.includes('class="katex'));
+        // \[ ... \] and \( ... \) math; fenced and inline code keep their text
+        const tex = side('\\[\nx^2\n\\]\n\nlet \\( y \\) be\n\n`\\[a\\]`\n\n```\n\\[b\\]\n```', 'markdown', 'a.md');
+        const texHtml = await getWebviewContent(tex, tex, 'dark', { preview: true });
+        assert.strictEqual(texHtml.match(/class="katex-display"/g)?.length, 2);  // once per side
+        assert.strictEqual(texHtml.match(/class="katex"/g)?.length, 4);  // display + inline, per side
+        assert.strictEqual(texHtml.match(/\\\[a\\\]/g)?.length, 2);
+        assert.strictEqual(texHtml.match(/\\\[b\\\]/g)?.length, 2);
+        const raw = await getWebviewContent(md, md, 'dark', { mathCss: 'https://base/katex.min.css' });
+        assert.ok(!raw.includes('katex.min.css'));
+    });
 });
 
 suite('Git chunk actions', () => {

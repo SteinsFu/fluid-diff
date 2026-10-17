@@ -193,12 +193,14 @@ body {
   min-width: 100%;
 }
 
-/* Markdown preview: wrap to pane width (max-content would never wrap). flow-root stops the first
-   block's top margin collapsing out of .lines, which would shift it off PANE_PAD. */
+/* Markdown preview: wrap to pane width (max-content would never wrap), but no narrower than min-width,
+   past which the pane scrolls sideways. flow-root stops the first block's top margin collapsing out
+   of .lines, which would shift it off PANE_PAD. */
 html[data-mode="preview"] .lines {
   display: flow-root;
   position: relative;
   width: auto;
+  min-width: max(100%, 440px);
   box-sizing: border-box;  /* min-width: 100% plus padding would overflow the pane */
   padding: 0 16px;
   white-space: normal;
@@ -215,6 +217,9 @@ html[data-mode="preview"] .lines pre { padding: 8px; background: rgba(128, 128, 
 html[data-mode="preview"] .lines pre code { background: none; padding: 0; }
 html[data-mode="preview"] .lines table { border-collapse: collapse; }
 html[data-mode="preview"] .lines th, html[data-mode="preview"] .lines td { border: 1px solid var(--gap); padding: 2px 8px; }
+/* An equation wider than min-width scrolls on its own instead of spilling out of its chunk band */
+html[data-mode="preview"] .lines .katex-display { overflow-x: auto; overflow-y: hidden; }
+html[data-mode="preview"] .lines .katex-error { color: var(--vscode-editorError-foreground, #f14c4c); }
 html[data-mode="preview"] .lines blockquote { margin-left: 0; padding-left: 12px; border-left: 3px solid var(--gap); color: var(--muted); }
 /* Word marks in preview flow inline so a mark can wrap across lines */
 html[data-mode="preview"] .word-insert, html[data-mode="preview"] .word-delete, html[data-mode="preview"] .word-replace {
