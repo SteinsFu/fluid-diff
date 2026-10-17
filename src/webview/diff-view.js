@@ -162,27 +162,37 @@ function drawBands(pane, side) {
     lines.prepend(b);
   }
 }
-// Diff the rendered text of the innermost blocks (p, li, tr, pre, ...) in each replaced range
-// with the raw view's diffBlock, one block per "line", then wrap the marks in place.
+// Text nodes of block el, minus those inside nested blocks: a list item's own text without its sub-list
+function ownTextNodes(el) {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+    acceptNode: n => n.nodeType === Node.TEXT_NODE ? NodeFilter.FILTER_ACCEPT
+      : n.hasAttribute('data-line') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP,
+  });
+  const nodes = [];
+  for (let n; (n = walker.nextNode());) nodes.push(n);
+  return nodes;
+}
+const ownText = el => ownTextNodes(el).map(n => n.data).join('');
+// Diff the own text of the blocks (p, li, tr, pre, ...) in each replaced range with the raw view's
+// diffBlock, one block per "line", then wrap the marks in place.
 function markWords() {
-  const leaves = (pane, s, e) => [...pane.querySelectorAll('.lines [data-line]')]
-    .filter(el => +el.dataset.line >= s && +el.dataset.line < e && !el.querySelector('[data-line]'));
+  const blocks = (pane, s, e) => [...pane.querySelectorAll('.lines [data-line]')]
+    .filter(el => +el.dataset.line >= s && +el.dataset.line < e && /\S/.test(ownText(el)));
   for (const d of drawn) {
     if (d.tag !== 'replace') continue;
-    const A = leaves(leftPane, d.a0, d.a1), B = leaves(rightPane, d.b0, d.b1);
-    const w = exports.diffBlock(A.map(el => el.textContent), B.map(el => el.textContent));
+    const A = blocks(leftPane, d.a0, d.a1), B = blocks(rightPane, d.b0, d.b1);
+    const w = exports.diffBlock(A.map(ownText), B.map(ownText));
     A.forEach((el, i) => wrapMarks(el, w.a[i]));
     B.forEach((el, j) => wrapMarks(el, w.b[j]));
   }
 }
-// Wrap textContent ranges [s, e) of el in spans; an empty range gets a zero-width gap span.
+// Wrap own-text ranges [s, e) of el in spans; an empty range gets a zero-width gap span.
 // Ranges may cross inline tags (<strong>, <code>), so each text node segment is wrapped on its own.
 const STRUCTURAL = new Set(['TR', 'THEAD', 'TBODY', 'TABLE', 'UL', 'OL']);  // a span directly inside these breaks layout
 function wrapMarks(el, marks) {
   for (const [s, e, cls] of marks) {
     const hits = [];
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    for (let n, off = 0; (n = walker.nextNode()); off += n.length) {
+    for (let nodes = ownTextNodes(el), k = 0, n, off = 0; (n = nodes[k]); off += n.length, k++) {
       if (STRUCTURAL.has(n.parentElement.tagName)) continue;
       if (s === e) {
         if (s >= off && s <= off + n.length) { hits.push([n, s - off, s - off]); break; }
