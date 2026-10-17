@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0] - 2026-10-17
+
+### Added
+
+- When both files are Markdown, a **Preview** button between the two paths renders both panes. **Raw** switches back to the source. Chunk colors, word highlights, aligned scrolling, and the scroll position stay.
+- Display math (`$$` … `$$` or `\[` … `\]`) and inline math (`$` … `$` or `\(` … `\)`) are typeset with KaTeX from VS Code's built-in Markdown Math extension. Changed words in the prose are marked. An equation is highlighted as one block.
+
 ## [1.1.0] - 2026-10-11
 
 ### Added

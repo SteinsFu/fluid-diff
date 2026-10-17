@@ -103,10 +103,12 @@ setup() {
     cp "$HERE/sample/job_queue_old.py" "$DEMO/job-queue/src/job_queue.py"
     cp "$HERE/sample/job_queue_old.py" "$DEMO/job-queue/compare/job_queue_v1.py"
     cp "$HERE/sample/job_queue_new.py" "$DEMO/job-queue/compare/job_queue_v2.py"
+    cp "$HERE/sample/notes_old.md" "$DEMO/job-queue/notes.md"
     git -C "$DEMO/job-queue" init -q
     git -C "$DEMO/job-queue" add .
     git -C "$DEMO/job-queue" -c user.name=demo -c user.email=demo@example.com commit -qm "Add job queue"
     cp "$HERE/sample/job_queue_new.py" "$DEMO/job-queue/src/job_queue.py"
+    cp "$HERE/sample/notes_new.md" "$DEMO/job-queue/notes.md"
     ln -s "$REPO" "$DEMO/ext/fluid-diff"
     cp -R "$HERE/driver" "$DEMO/ext/driver"
     settings "Default Dark Modern" Dark

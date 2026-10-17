@@ -13,6 +13,7 @@ const run = (cmd, ...args) => vscode.commands.executeCommand(cmd, ...args);
 // Workspace paths, not ROOT: ROOT comes from __dirname, which macOS resolves to /private/tmp.
 const file = (...parts) => vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, ...parts);
 const MAIN = file('src', 'job_queue.py');
+const NOTES = file('notes.md');
 const V1 = file('compare', 'job_queue_v1.py');
 const V2 = file('compare', 'job_queue_v2.py');
 
@@ -55,6 +56,10 @@ async function activate() {
             await run('fluid-diff.fluidDiffGit');
             await delay(600);
         } else if (mode === 'gif-preview' || mode === 'gif-ruler' || mode === 'gif-words' || mode === 'gif-chunks') {
+            await run('fluid-diff.fluidDiffGit');
+            await delay(1500);
+        } else if (mode === 'gif-md') {
+            await open(NOTES);
             await run('fluid-diff.fluidDiffGit');
             await delay(1500);
         } else if (mode === 'gif-git' || mode === 'gif-theme') {

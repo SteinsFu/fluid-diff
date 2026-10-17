@@ -13,7 +13,8 @@ These scripts regenerate the screenshots and GIFs used in the top-level `README.
 | `images/demo-compare.gif` | Explorer selection, right-click, then **Fluid Diff: Compare Selected** |
 | `images/demo-timeline.gif` | Timeline diff, then the **Fluid Diff: From Diff Editor** title-bar icon |
 | `images/demo-chunks.gif` | Revert two chunks, then stage and unstage two more. Each click shows a caption |
-| `videos/clips/*.mp4` | 60 fps recording of every GIF scene, plus `words`, `theme`, `preview-light` and `preview-dracula`, which have no GIF |
+| `images/demo-md.gif` | Raw Markdown diff of a note with math, then **Preview** renders both panes |
+| `videos/clips/*.mp4` | 60 fps recording of the default GIF scenes, plus `words`, `theme`, `preview-light` and `preview-dracula`, which have no GIF. `md` is not in that default run |
 | `videos/fluid-diff-short.mp4` | Vertical 1080×1920 reel at 60 fps, under 60 seconds, with headlines, word-by-word captions and upbeat house music |
 | `videos/fluid-diff-long.mp4` | Horizontal 1920×1080 tour of every feature at 60 fps, over 60 seconds, with chapter titles, subtitles and lo-fi music |
 
@@ -44,12 +45,13 @@ To redo only some outputs, name them:
 ```bash
 scripts/demo/make-images.sh stills              # theme PNGs and command.png
 scripts/demo/make-images.sh git chunks          # just these two GIFs
+scripts/demo/make-images.sh md                 # Markdown preview GIF (notes.md, with math)
 scripts/demo/make-videos.sh ruler render      # re-record one clip, then re-cut both videos
 scripts/demo/make-videos.sh preview-light     # records scenes/preview.json in the Light theme
 scripts/demo/make-videos.sh render            # re-cut both videos from the existing clips, no VS Code
 ```
 
-Clip names: `preview`, `ruler`, `git`, `compare`, `timeline`, `chunks`, `words`, `theme`, `preview-light`, `preview-dracula`. The scene is the part before any `-`, and `-light` or `-dracula` picks the theme.
+Clip names: `preview`, `ruler`, `git`, `compare`, `timeline`, `chunks`, `words`, `theme`, `preview-light`, `preview-dracula`. The scene is the part before any `-`, and `-light` or `-dracula` picks the theme. `make-videos.sh md` records the Markdown preview scene; it is not part of the default run.
 
 While it runs, don't touch the mouse or keyboard, and don't switch apps. Stage Manager shrinks the demo window if it loses focus.
 
@@ -71,7 +73,8 @@ Environment overrides:
 | `make-images.sh` | Takes the screenshots and records the GIFs |
 | `make-videos.sh` | Records the 60 fps clips, then runs `video.py` for both videos |
 | `driver/` | Small helper extension loaded into the demo VS Code. It opens the files and preloads the Fluid Diff panel for each scene |
-| `sample/job_queue_old.py`, `sample/job_queue_new.py` | The file pair shown in every diff |
+| `sample/job_queue_old.py`, `sample/job_queue_new.py` | The file pair shown in every diff except `md` |
+| `sample/notes_old.md`, `sample/notes_new.md` | The Markdown note, including math, shown in the `md` GIF |
 | `scenes/*.json` | Mouse and keyboard steps for each GIF |
 | `input.swift` | Plays a scene with real input events and logs them. Also exports the macOS arrow cursor image |
 | `window.swift` | Finds the demo window ID and position |

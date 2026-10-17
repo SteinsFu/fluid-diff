@@ -113,6 +113,20 @@ Multi-file diffs, such as a whole commit opened from the Source Control Graph, a
   <img src="images/command.png" alt="Fluid Diff: Git in the VS Code Command Palette" width="820">
 </p>
 
+## Markdown preview
+
+When both files are Markdown, a **Preview** button sits between the two paths. Click it to render both panes, including math. **Raw** switches back to the source. Chunk colors, word highlights, and aligned scrolling stay on.
+
+- Display math (`$$` … `$$` or `\[` … `\]`) and inline math (`$` … `$` or `\(` … `\)`) are typeset with KaTeX from VS Code's built-in Markdown Math extension.
+- Changed words in the prose are marked. An equation is highlighted as one block.
+- Scroll position is kept across the switch.
+
+<p align="center">
+  <img src="images/demo-md.gif" alt="Raw Markdown diff, then Preview renders the prose and math on both sides" width="820">
+  <br>
+  <em>Click Preview to render the Markdown, including the changed equation.</em>
+</p>
+
 ## Themes
 
 Run **Fluid Diff: Select Theme** from the Command Palette, or set `fluid-diff.theme` in Settings.
@@ -141,6 +155,7 @@ The theme applies to diff panels opened after the change.
 - **Compare any two selected files.** Pick two files in the Explorer and open them side by side. This command reads the two files directly.
 - **Reopen any VS Code diff.** From a built-in single-file diff, such as a past commit in the Timeline view, reopen the same two sides in Fluid Diff.
 - **Themes.** Auto, Light, Dark, and Dracula. Auto follows the VS Code color theme.
+- **Markdown preview.** When both files are Markdown, switch between the source and a rendered preview. Math is typeset with KaTeX. Changed blocks stay highlighted.
 
 ## Requirements
 
@@ -172,8 +187,9 @@ These messages come from the chunk buttons. The panel stays open.
 - [x] Themes: Auto, Light, Dark, Dracula
 - [x] Reopen a built-in single-file diff
 - [x] Stage, unstage, and revert single chunks in Git diffs
+- [x] Diffing in Markdown preview
 - [ ] Open changes from git graph
-- [ ] Diffing in Markdown preview
+- [ ] word-level highlight in math equation
 
 ## Limits
 
@@ -192,4 +208,4 @@ npm test          # compile, lint, then run tests
 
 Press `F5` in VS Code to start an Extension Development Host with Fluid Diff loaded.
 
-To refresh the README images after a UI change, run `scripts/demo/make-images.sh` on macOS, or pass `stills`, `git`, `chunks`, `compare`, or `timeline` to redo only some of them. See [`scripts/demo/README.md`](scripts/demo/README.md) for requirements. The GIF click positions live in `scripts/demo/scenes/`.
+To refresh the README images after a UI change, run `scripts/demo/make-images.sh` on macOS, or pass `stills`, `git`, `chunks`, `compare`, `timeline`, or `md` to redo only some of them. See [`scripts/demo/README.md`](scripts/demo/README.md) for requirements. The GIF click positions live in `scripts/demo/scenes/`.
