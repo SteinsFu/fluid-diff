@@ -69,6 +69,7 @@ export function activate(context: vscode.ExtensionContext) {
         // 4. Set the HTML content of the webview panel
         const theme = getTheme();
         const lang = activeEditor.document.languageId;
+        let preview = false;
         
         const render = async () => { 
             const getIndexText = async () => await git(repo.rootUri.fsPath, ['show', `:${relPath(repo, fileName)}`]);
@@ -81,7 +82,9 @@ export function activate(context: vscode.ExtensionContext) {
                 theme, 
                 `${fileName} (HEAD)`, 
                 fileName,
-                await getIndexText()
+                await getIndexText(),
+                preview,
+                panel.webview.asWebviewUri(vscode.Uri.file(path.dirname(fileName))) + '/'
             );
         }
         await render();
@@ -97,6 +100,11 @@ export function activate(context: vscode.ExtensionContext) {
         const reverts: RevertHistory = [];
         panel.webview.onDidReceiveMessage(async ({ type, chunk }: { type: string; chunk: Chunk }) => {
             try {
+                if (type === 'toggleMode') {
+                    preview = !preview;
+                    await render();
+                    return;
+                }
                 if (type === 'undo') {
                     if (!await undoRevert(doc, reverts)) {
                         vscode.window.showWarningMessage('Fluid Diff: File was edited after the revert; use undo in the editor instead.');
@@ -157,7 +165,18 @@ export function activate(context: vscode.ExtensionContext) {
 
         // 3. Set the HTML content of the webview panel
         const theme = getTheme();
-        panel.webview.html = await getWebviewContent(context, doc1.getText(), doc2.getText(), lang1, lang2, theme, doc1.fileName, doc2.fileName);
+        let preview = false;
+        const render = async () => {
+            panel.webview.html = await getWebviewContent(context, doc1.getText(), doc2.getText(), lang1, lang2, theme, doc1.fileName, doc2.fileName,
+                undefined, preview, panel.webview.asWebviewUri(vscode.Uri.file(path.dirname(doc2.fileName))) + '/');
+        };
+        await render();
+        panel.webview.onDidReceiveMessage(async ({ type }: { type: string }) => {
+            if (type === 'toggleMode') {
+                preview = !preview;
+                await render();
+            }
+        });
     });
 
     // ===== Command 3: Select Theme =====
@@ -187,7 +206,18 @@ export function activate(context: vscode.ExtensionContext) {
                     enableScripts: true, // Crucial! allwo JS to run inside HTML webview
                 }
             );
-            panel.webview.html = await getWebviewContent(context, oldDoc.getText(), newDoc.getText(), lang1, lang2, theme, oldDoc.fileName, newDoc.fileName);
+            let preview = false;
+            const render = async () => {
+                panel.webview.html = await getWebviewContent(context, oldDoc.getText(), newDoc.getText(), lang1, lang2, theme, oldDoc.fileName, newDoc.fileName,
+                    undefined, preview, panel.webview.asWebviewUri(vscode.Uri.file(path.dirname(newDoc.fileName))) + '/');
+            };
+            await render();
+            panel.webview.onDidReceiveMessage(async ({ type }: { type: string }) => {
+                if (type === 'toggleMode') {
+                    preview = !preview;
+                    await render();
+                }
+            });
         }
     });
 
@@ -206,12 +236,16 @@ export async function getWebviewContent(
     theme: string, 
     pathA: string, pathB: string, 
     gitIndexText?: string,       // if index text is provided, Git mode => show revert/stage buttons
+    preview = false,
+    previewBaseHref = '',
 ): Promise<string> {
     const linesA = textA.split(/\r?\n/);
     const linesB = textB.split(/\r?\n/);
     const chunks = diffLines(linesA, linesB);
+    const isMd = langA === 'markdown' && langB === 'markdown';
+    const isPreview = preview && isMd;
 
-    // mark staged chunks (for git mode only)
+    // [If Git Mode] mark staged chunks
     if (gitIndexText !== undefined) {
         const index = gitIndexText.split(/\r?\n/);
         const pending = diffLines(index, linesB);   // not staged yet, in buffer coordinates
@@ -222,31 +256,60 @@ export async function getWebviewContent(
         }
     }
 
-    // syntax-color the lines
-    const [coloreToksA, coloreToksB] = await Promise.all([
-        syntaxColoredLines(linesA.join('\n'), langA, theme),
-        syntaxColoredLines(linesB.join('\n'), langB, theme),
-    ])
-
-    // Word highlights only for replace chunks (pure insert/delete chunks are not highlighted cuz background color is enough to distinguish)
-    const words = { a: new Map<number, WordMark[]>(), b: new Map<number, WordMark[]>() };
-    for (const c of chunks) {
-        if (c.tag !== 'replace') { continue; }
-        const w = diffBlock(linesA.slice(c.a0, c.a1), linesB.slice(c.b0, c.b1));
-        w.a.forEach((marks, i) => words.a.set(c.a0 + i, marks));
-        w.b.forEach((marks, j) => words.b.set(c.b0 + j, marks));
+    let htmlA: string, htmlB: string;
+    // [If Preview Mode] generate the preview HTML content
+    if (isPreview) {
+        const renderMd = async (lines: string[]) => 
+            await vscode.commands.executeCommand<string>('markdown.api.render', lines.join('\n')) 
+            + `<div data-line="${lines.length}"></div>`; // end-of-file marker
+        [htmlA, htmlB] = await Promise.all([
+            renderMd(linesA),
+            renderMd(linesB)
+        ]);
+        // trim blank lines off each chunk's display range
+        const blank = (l: string[], i: number) => !l[i].trim();
+        const trim = (l: string[], s: number, e: number): [number, number] => {
+            while (s < e && blank(l, s)) { s++; }
+            while (e > s && blank(l, e - 1)) { e--; }
+            return [s, e];
+        };
+        for (const c of chunks) {
+            [c.va0, c.va1] = trim(linesA, c.a0, c.a1);
+            [c.vb0, c.vb1] = trim(linesB, c.b0, c.b1);
+        }
+    } else {
+        // [If Raw Text Mode] syntax-color the lines
+        const [coloredToksA, coloredToksB] = await Promise.all([
+            syntaxColoredLines(linesA.join('\n'), langA, theme),
+            syntaxColoredLines(linesB.join('\n'), langB, theme),
+        ]);
+        // Word highlights only for replace chunks (pure insert/delete chunks are not highlighted cuz background color is enough to distinguish)
+        const words = { a: new Map<number, WordMark[]>(), b: new Map<number, WordMark[]>() };
+        for (const c of chunks) {
+            if (c.tag !== 'replace') { continue; }
+            const w = diffBlock(linesA.slice(c.a0, c.a1), linesB.slice(c.b0, c.b1));
+            w.a.forEach((marks, i) => words.a.set(c.a0 + i, marks));
+            w.b.forEach((marks, j) => words.b.set(c.b0 + j, marks));
+        }
+        htmlA = renderLines(linesA, chunks, 'a', words.a, coloredToksA);
+        htmlB = renderLines(linesB, chunks, 'b', words.b, coloredToksB);
     }
 
     const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'diff-view.html');
     // Function replacers: file text may contain `$&`-style patterns that string replacers expand.
     const htmlContent = fs.readFileSync(htmlPath, 'utf8').replace(
-            /\{\{(textA|textB|chunks|theme|pathA|pathB|hasGitActions)\}\}/g,
-        (token) => token === '{{textA}}' ? renderLines(linesA, chunks, 'a', words.a, coloreToksA)
-            : token === '{{textB}}' ? renderLines(linesB, chunks, 'b', words.b, coloreToksB)
+            /\{\{(textA|textB|chunks|theme|pathA|pathB|hasGitActions|mode|isMd|previewBaseHref|diffJs)\}\}/g,
+        (token) => token === '{{textA}}' ? htmlA
+            : token === '{{textB}}' ? htmlB
             : token === '{{chunks}}' ? JSON.stringify(chunks)
             : token === '{{pathA}}' ? escape(pathA)
             : token === '{{pathB}}' ? escape(pathB)
             : token === '{{hasGitActions}}' ? String(gitIndexText !== undefined)
+            : token === '{{mode}}' ? isPreview ? 'preview' : 'raw'
+            : token === '{{isMd}}' ? String(isMd)
+            : token === '{{previewBaseHref}}' ? previewBaseHref
+            // Preview word marks run diffBlock in the webview on rendered text; compiled diff.js has no imports
+            : token === '{{diffJs}}' ? (isPreview ? fs.readFileSync(path.join(__dirname, 'diff.js'), 'utf8') : '')
             : theme
     );
     return htmlContent;

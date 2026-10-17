@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{theme}}">
+<html lang="en" data-theme="{{theme}}" data-mode="{{mode}}">
 
 <head>
+  <base href="{{previewBaseHref}}">
   <style>
     :root {
       --bg: #1e1e1e;
@@ -115,6 +116,23 @@
       background: var(--chrome);
       border-bottom: 1px solid var(--gap);
     }
+    /* Sits above the gutter, same 60px width */
+    .mode-slot {
+      flex: 0 0 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #modeToggle {
+      padding: 0 4px;
+      font-size: 11px;
+      border: 1px solid var(--gap);
+      border-radius: 4px;
+      background: var(--chrome);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    #modeToggle:hover { color: var(--fg); border-color: var(--fg); }
     .path {
       flex: 0 0 calc(50% - 30px - 10px);
       min-width: 0;
@@ -202,6 +220,41 @@
       width: max-content;
       min-width: 100%;
     }
+
+    /* Markdown preview: wrap to pane width (max-content would never wrap). flow-root stops the first
+       block's top margin collapsing out of .lines, which would shift it off PANE_PAD. */
+    html[data-mode="preview"] .lines {
+      display: flow-root;
+      position: relative;
+      width: auto;
+      box-sizing: border-box;  /* min-width: 100% plus padding would overflow the pane */
+      padding: 0 16px;
+      white-space: normal;
+      font-family: var(--vscode-font-family, sans-serif);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    /* Positioned content paints above the bands, which come first in the DOM */
+    html[data-mode="preview"] .lines > :not(.band):not(.chunk-actions-container) { position: relative; }
+    html[data-mode="preview"] .lines img { max-width: 100%; }
+    html[data-mode="preview"] .lines a { color: var(--vscode-textLink-foreground, #3794ff); }
+    html[data-mode="preview"] .lines code { font-family: monospace; background: rgba(128, 128, 128, 0.15); border-radius: 3px; padding: 0 3px; }
+    html[data-mode="preview"] .lines pre { padding: 8px; background: rgba(128, 128, 128, 0.15); border-radius: 4px; overflow-x: auto; }
+    html[data-mode="preview"] .lines pre code { background: none; padding: 0; }
+    html[data-mode="preview"] .lines table { border-collapse: collapse; }
+    html[data-mode="preview"] .lines th, html[data-mode="preview"] .lines td { border: 1px solid var(--gap); padding: 2px 8px; }
+    html[data-mode="preview"] .lines blockquote { margin-left: 0; padding-left: 12px; border-left: 3px solid var(--gap); color: var(--muted); }
+    /* Word marks in preview flow inline so a mark can wrap across lines */
+    html[data-mode="preview"] .word-insert, html[data-mode="preview"] .word-delete, html[data-mode="preview"] .word-replace {
+      display: inline;
+      height: auto;
+      line-height: inherit;
+      vertical-align: baseline;
+    }
+    html[data-mode="preview"] .word-gap-insert, html[data-mode="preview"] .word-gap-delete { height: 1.2em; vertical-align: text-bottom; }
+    /* Chunk backgrounds in preview, positioned from the line-to-pixel table */
+    .band { position: absolute; left: 0; right: 0; }
+    .band.gap { border-top: 1px solid rgba(var(--outline), var(--outline-alpha, 1)); }
 
     .line-num {
       display: inline-block;
@@ -292,6 +345,8 @@
       height: 0;
       z-index: 2;
     }
+    /* Preview .lines has 16px side padding; pull the pane-wide container back to the pane edge */
+    html[data-mode="preview"] .chunk-actions-container { margin-left: -16px; }
     .chunk-actions { 
       position: absolute;  
       right: 4px; 
@@ -362,7 +417,7 @@
     <div style="flex: 0 0 10px"></div>
     <!-- &lrm; on both ends keeps leading "/" and trailing ")" from jumping sides under rtl -->
     <div class="path" title="{{pathA}}">&lrm;{{pathA}}&lrm;</div>
-    <div style="flex: 0 0 60px"></div>
+    <div class="mode-slot"><button id="modeToggle" hidden></button></div>
     <div class="path" title="{{pathB}}">&lrm;{{pathB}}&lrm;</div>
   </div>
   <div class="main">
@@ -375,7 +430,9 @@
     <div id="rightRuler"><div id="rightRulerViewport"></div></div>
   </div>
 
+  <script>var exports = {};{{diffJs}}</script>
   <script>
+    const vscode = acquireVsCodeApi();
     const leftPane = document.getElementById('leftPane');
     const rightPane = document.getElementById('rightPane');
     const canvas = document.getElementById('canvas');
@@ -388,7 +445,6 @@
     const CHUNK_COLORS = Object.fromEntries(['insert', 'delete', 'replace'].map(t => [t, rootStyle.getPropertyValue(`--chunk-${t}`).trim()]));
     // Chunk actions: revert, stage
     const HAS_GIT_ACTIONS = JSON.parse('{{hasGitActions}}');  // boolean
-    const vscode = HAS_GIT_ACTIONS ? acquireVsCodeApi() : null;
     // Same symbols as VS Code's Source Control view: discard arrow, plus, minus
     const ICONS = {
       revert: '<svg viewBox="0 0 16 16"><path d="M4 6h6a3 3 0 0 1 0 6H7M6.5 3.5 4 6l2.5 2.5"/></svg>',
@@ -409,15 +465,154 @@
       revertBtn.disabled = !!c.hasStaged; // reverting the buffer would leave the staged part invisible in the index
       revertBtn.onclick = () => send({ type: 'revert', chunk: c });
       stageBtn.onclick = () => send({ type: stageType, chunk: c });
-      el.style.top = Math.max(-PANE_PAD, c.b0 * LINE_HEIGHT - 18 - 1) + 'px';
       actionContainerEl.appendChild(el);
       return el;
     }) : [];
-    // The extension re-renders the whole page after an action or tab switch; webview state survives that reload.
-    const saveScroll = () => vscode?.setState({ top: rightPane.scrollTop, left: rightPane.scrollLeft });
+    // The extension re-renders the whole page after an action, tab switch or mode toggle; webview state survives that reload.
+    // Saved as a source line, since pixel offsets differ between raw and preview.
+    const saveScroll = () => vscode?.setState({ line: midLine(rightPane), left: rightPane.scrollLeft });
     function send(msg) {
       saveScroll();
       vscode.postMessage(msg);
+    }
+    // Raw/Preview toggle, only for markdown pairs; the extension re-renders in the other mode
+    const modeToggle = document.getElementById('modeToggle');
+    modeToggle.hidden = !JSON.parse('{{isMd}}');
+    modeToggle.textContent = '{{mode}}' === 'preview' ? 'Raw' : 'Preview';
+    modeToggle.title = `Switch to ${modeToggle.textContent.toLowerCase()} view`;
+    modeToggle.onclick = () => send({ type: 'toggleMode' });
+    const IS_PREVIEW_MODE = '{{mode}}' === 'preview';
+    const rows = new Map(); // pane -> [[line, offsetY], ...], sorted by line
+    function buildRows(pane) {
+      const lines = pane.querySelector('.lines');
+      const top0 = lines.getBoundingClientRect().top;
+      const byLine = new Map();
+      for (const el of lines.querySelectorAll('[data-line]')) {
+        const k = +el.dataset.line, y = el.getBoundingClientRect().top - top0;
+        byLine.set(k, Math.min(byLine.get(k) ?? Infinity, y)); // <ul> and its first <li> share a line, keep the higher one
+      }
+      rows.set(pane, [...byLine].sort((p, q) => p[0] - q[0]));
+    }
+    // Interpolate between rows in either direction (col 0 = line, col 1 = offset); clamps past the last row.
+    // Last row whose col value is <= v (0 if none); both columns are sorted, so binary search
+    function rowIndex(r, v, col) {
+      let lo = 0, hi = r.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        if (r[mid][col] <= v) lo = mid; else hi = mid - 1;
+      }
+      return lo;
+    }
+    function interp(r, v, from) {
+      const to = 1 - from, i = rowIndex(r, v, from), p = r[i], q = r[i + 1];
+      if (!q || q[from] === p[from]) return p[to];
+      return p[to] + (v - p[from]) / (q[from] - p[from]) * (q[to] - p[to]);
+    }
+    // Line k <-> pixel offset inside .lines (PANE_PAD excluded)
+    const lineOffset = (pane, k) => IS_PREVIEW_MODE ? interp(rows.get(pane), k, 0) : k * LINE_HEIGHT;
+    const offsetLine = (pane, y) => IS_PREVIEW_MODE ? interp(rows.get(pane), y, 1) : y / LINE_HEIGHT;
+    const lineCount = pane => IS_PREVIEW_MODE ? rows.get(pane).at(-1)[0] : pane.querySelectorAll('.line').length;
+    // Snap line k to a block start: down to its own block, or up to the next one
+    function snapLine(pane, k, up) {
+      const r = rows.get(pane), i = rowIndex(r, k, 0);
+      return up && r[i][0] < k && r[i + 1] ? r[i + 1][0] : r[i][0];
+    }
+    // Display range of one chunk side ('a' or 'b'): blank-trimmed and snapped to whole blocks in preview
+    function span(pane, c, side) {
+      if (!IS_PREVIEW_MODE) return [c[side + '0'], c[side + '1']];
+      const s = c['v' + side + '0'], e = c['v' + side + '1'];
+      if (s === e) { const g = snapLine(pane, s, true); return [g, g]; }
+      return [snapLine(pane, s, false), snapLine(pane, e, true)];
+    }
+    // Chunk ranges as drawn: { tag, staged, a0, a1, b0, b1 }. In preview, chunks whose snapped ranges overlap
+    // on either side, or touch on both (e.g. a deleted blank line merging two paragraphs), become one,
+    // so a block never gets two bands or a doubled edge.
+    let drawn = [];
+    function buildDrawn() {
+      drawn = [];
+      for (const c of chunks) {
+        const [a0, a1] = span(leftPane, c, 'a'), [b0, b1] = span(rightPane, c, 'b');
+        const p = drawn.at(-1);
+        if (IS_PREVIEW_MODE && p && (a0 < p.a1 || b0 < p.b1 || (a0 === p.a1 && b0 === p.b1))) {
+          p.tag = p.tag === c.tag ? p.tag : 'replace';
+          p.staged = p.staged && c.staged;
+          p.a1 = Math.max(p.a1, a1);
+          p.b1 = Math.max(p.b1, b1);
+        } else {
+          drawn.push({ tag: c.tag, staged: c.staged, a0, a1, b0, b1 });
+        }
+      }
+    }
+    // Preview chunk backgrounds; reuses the raw view's chunk/staged classes for colors and outlines
+    function drawBands(pane, side) {
+      const lines = pane.querySelector('.lines');
+      lines.querySelectorAll(':scope > .band').forEach(b => b.remove());
+      for (const c of drawn) {
+        const [s, e] = [c[side + '0'], c[side + '1']];
+        const b = document.createElement('div');
+        b.className = `band chunk-${c.tag} chunk-start chunk-end${c.staged ? ' staged' : ''}${s === e ? ' gap' : ''}`;
+        // An end-of-file gap line sits above the boundary, matching edgesOf
+        b.style.top = lineOffset(pane, s) - (s === e && s >= lineCount(pane) ? 1 : 0) + 'px';
+        b.style.height = lineOffset(pane, e) - lineOffset(pane, s) + 'px';
+        lines.prepend(b);
+      }
+    }
+    // Preview word marks: diff the rendered text of the innermost blocks (p, li, tr, pre, ...) in each
+    // replaced range with the raw view's diffBlock, one block per "line", then wrap the marks in place.
+    function markWords() {
+      const leaves = (pane, s, e) => [...pane.querySelectorAll('.lines [data-line]')]
+        .filter(el => +el.dataset.line >= s && +el.dataset.line < e && !el.querySelector('[data-line]'));
+      for (const d of drawn) {
+        if (d.tag !== 'replace') continue;
+        const A = leaves(leftPane, d.a0, d.a1), B = leaves(rightPane, d.b0, d.b1);
+        const w = exports.diffBlock(A.map(el => el.textContent), B.map(el => el.textContent));
+        A.forEach((el, i) => wrapMarks(el, w.a[i]));
+        B.forEach((el, j) => wrapMarks(el, w.b[j]));
+      }
+    }
+    // Wrap textContent ranges [s, e) of el in spans; an empty range gets a zero-width gap span.
+    // Ranges may cross inline tags (<strong>, <code>), so each text node segment is wrapped on its own.
+    const STRUCTURAL = new Set(['TR', 'THEAD', 'TBODY', 'TABLE', 'UL', 'OL']);  // a span directly inside these breaks layout
+    function wrapMarks(el, marks) {
+      for (const [s, e, cls] of marks) {
+        const hits = [];
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        for (let n, off = 0; (n = walker.nextNode()); off += n.length) {
+          if (STRUCTURAL.has(n.parentElement.tagName)) continue;
+          if (s === e) {
+            if (s >= off && s <= off + n.length) { hits.push([n, s - off, s - off]); break; }
+          } else {
+            const a = Math.max(s, off) - off, b = Math.min(e, off + n.length) - off;
+            if (a < b && /\S/.test(n.data.slice(a, b))) hits.push([n, a, b]);
+          }
+        }
+        for (const [n, a, b] of hits) {
+          const span = document.createElement('span');
+          span.className = cls;
+          const mid = n.splitText(a);
+          if (a === b) { mid.before(span); continue; }
+          mid.splitText(b - a);
+          mid.replaceWith(span);
+          span.append(mid);
+        }
+      }
+    }
+    // Re-measure and redraw everything positioned from line offsets
+    function layout() {
+      if (IS_PREVIEW_MODE) {
+        buildRows(leftPane);
+        buildRows(rightPane);
+      }
+      buildDrawn();
+      if (IS_PREVIEW_MODE) {
+        drawBands(leftPane, 'a');
+        drawBands(rightPane, 'b');
+      }
+      actionEls.forEach((el, i) => {
+        el.style.top = Math.max(-PANE_PAD, lineOffset(rightPane, span(rightPane, chunks[i], 'b')[0]) - 18 - 1) + 'px';
+      });
+      drawRulerMarks();
+      resizeCanvas();
     }
     // Ctrl/Cmd+Z undoes the last revert button click; the extension owns that history
     if (HAS_GIT_ACTIONS) window.addEventListener('keydown', e => {
@@ -427,30 +622,22 @@
       }
     });
 
-    // Draw ruler marks & viewports
-    drawRulerMarks();
+    // Draw ruler marks & viewports; marks are redrawn on every layout()
     function drawRulerMarks() {
-      const leftRuler = document.getElementById('leftRuler');
-      const rightRuler = document.getElementById('rightRuler');
-      const nA = leftPane.querySelectorAll('.line').length;    // number of lines in left pane
-      const nB = rightPane.querySelectorAll('.line').length;   // number of lines in right pane
-      
-      for (const c of chunks) {
-        // left pane ruler (only draw marks for non-empty chunks)
-        if (c.a0 !== c.a1) {
+      const sides = [[document.getElementById('leftRuler'), leftPane, 'a'], [document.getElementById('rightRuler'), rightPane, 'b']];
+      for (const [ruler, pane, side] of sides) {
+        ruler.querySelectorAll('.ruler-mark').forEach(m => m.remove());
+        const n = lineCount(pane);
+        // Raw: line fraction. Preview: pixel fraction, since blocks have different heights.
+        const frac = k => IS_PREVIEW_MODE ? (PANE_PAD + lineOffset(pane, k)) / pane.scrollHeight : k / n;
+        for (const c of drawn) {
+          const [s, e] = [c[side + '0'], c[side + '1']];
+          if (s === e) continue;  // only draw marks for non-empty chunks
           const m = document.createElement('div');
           m.className = `ruler-mark ruler-mark-${c.tag}`;
-          m.style.top = (c.a0 / nA) * 100 + '%';
-          m.style.height = (c.a1 - c.a0) / nA * 100 + '%';
-          leftRuler.appendChild(m);
-        }
-        // right pane ruler (only draw marks for non-empty chunks)
-        if (c.b0 !== c.b1) {
-          const m = document.createElement('div');
-          m.className = `ruler-mark ruler-mark-${c.tag}`;
-          m.style.top = (c.b0 / nB) * 100 + '%';
-          m.style.height = (c.b1 - c.b0) / nB * 100 + '%';
-          rightRuler.appendChild(m);
+          m.style.top = frac(s) * 100 + '%';
+          m.style.height = (frac(e) - frac(s)) * 100 + '%';
+          ruler.appendChild(m);
         }
       }
     }
@@ -476,14 +663,14 @@
       drawRulerViewports();
     }
 
-    // Line boundary k (top of line k) in viewport pixels; lines have fixed height, so no DOM lookups.
-    const yOf = (pane, k) => PANE_PAD + k * LINE_HEIGHT - pane.scrollTop;
+    // Line boundary k (top of line k) in viewport pixels
+    const yOf = (pane, k) => PANE_PAD + lineOffset(pane, k) - pane.scrollTop;
 
     // Top/bottom curve y for a chunk side, centered on the 1px inset outline drawn in the pane:
     // chunk-start/gap-before sit just below the boundary, chunk-end/gap-after just above it.
     function edgesOf(pane, s, e) {
       if (s < e) return [yOf(pane, s) + 0.5, yOf(pane, e) - 0.5];
-      const y = yOf(pane, s) + (s < pane.querySelectorAll('.line').length ? 0.5 : -0.5);
+      const y = yOf(pane, s) + (s < lineCount(pane) ? 0.5 : -0.5);
       return [y, y];
     }
 
@@ -492,7 +679,7 @@
       const w = canvas.parentElement.clientWidth;
       const h = canvas.parentElement.clientHeight;
       ctx.clearRect(0, 0, w, h);
-      for (const [i, c] of chunks.entries()) {
+      for (const [i, c] of drawn.entries()) {
         const [ly0, ly1] = edgesOf(leftPane, c.a0, c.a1);
         const [ry0, ry1] = edgesOf(rightPane, c.b0, c.b1);
         // Draw the chunk actions buttons
@@ -539,7 +726,7 @@
     }
 
     // Sync on the line at the vertical middle of the viewport.
-    const midLine = pane => (pane.scrollTop + pane.clientHeight / 2 - PANE_PAD) / LINE_HEIGHT;
+    const midLine = pane => offsetLine(pane, pane.scrollTop + pane.clientHeight / 2 - PANE_PAD);
     const expected = new Map();
     function syncFrom(src, dst, from) {
       // Ignore the scroll event our own assignment below triggers on dst.
@@ -553,7 +740,7 @@
     }
     function syncTo(src, dst, from) {
       const [top, left] = [dst.scrollTop, dst.scrollLeft];
-      dst.scrollTop = mapLine(midLine(src), from) * LINE_HEIGHT + PANE_PAD - dst.clientHeight / 2;
+      dst.scrollTop = PANE_PAD + lineOffset(dst, mapLine(midLine(src), from)) - dst.clientHeight / 2;
       dst.scrollLeft = src.scrollLeft;
       if (dst.scrollTop !== top || dst.scrollLeft !== left) expected.set(dst, [dst.scrollTop, dst.scrollLeft]);
     }
@@ -619,10 +806,18 @@
       if (rightRuler.hasPointerCapture(e.pointerId)) jumpTo(e, rightRuler, rightPane);
     });
     window.addEventListener('resize', resizeCanvas);
-    // Restore the position saved by send(); the scroll listener above syncs the left pane.
+    // Rows must exist before the first scroll sync or draw reads them
+    layout();
+    // Once: wrapping words adds no text, so later re-layouts keep them
+    if (IS_PREVIEW_MODE) markWords();
+    // Images loading and width changes move preview blocks; re-measure when either side resizes
+    const resizeObserver = new ResizeObserver(layout);
+    resizeObserver.observe(leftPane.querySelector('.lines'));
+    resizeObserver.observe(rightPane.querySelector('.lines'));
+    // Restore the line saved by send() to the middle of the viewport; the scroll listener above syncs the left pane.
     const saved = vscode?.getState();
     if (saved) {
-      rightPane.scrollTop = saved.top;
+      rightPane.scrollTop = PANE_PAD + lineOffset(rightPane, saved.line ?? 0) - rightPane.clientHeight / 2;
       rightPane.scrollLeft = saved.left;
     }
     setTimeout(resizeCanvas, 100);

@@ -8,6 +8,10 @@ export interface Chunk {
     a1: number;
     b0: number;
     b1: number;
+    va0?: number;
+    va1?: number;
+    vb0?: number;
+    vb1?: number;
     staged?: boolean;     // the index already holds this whole change
     hasStaged?: boolean;  // the index differs from HEAD somewhere in this chunk
 }

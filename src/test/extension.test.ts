@@ -87,7 +87,18 @@ suite('Webview content', () => {
         // one staged line on each side
         assert.strictEqual(html.match(/class="[^"]*\bstaged\b/g)?.length, 2);
     });
-});
+
+    test('preview mode: rendered markdown with block line numbers and blank-trimmed chunks', async () => {
+        // inserted paragraph plus its blank line: the display range drops the blank line
+        const html = await getWebviewContent(context(), '# T\n\nend', '# T\n\nnew\n\nend', 'markdown', 'markdown', 'dark', 'a.md', 'b.md',
+            undefined, true, 'https://base/');
+        assert.ok(html.includes('data-mode="preview"'));
+        assert.ok(html.includes('<base href="https://base/">'));
+        assert.ok(/<h1[^>]*data-line="0"/.test(html));
+        assert.ok(html.includes('<div data-line="5"></div>'));  // end-of-file marker on the new side
+        assert.ok(html.includes('exports.diffBlock = diffBlock'));  // word marks run diffBlock in the webview        assert.ok(html.includes('"a0":2,"a1":2,"b0":2,"b1":4,"va0":2,"va1":2,"vb0":2,"vb1":3'));
+        assert.ok(!/\{\{\w+\}\}/.test(html));
+    });});
 
 suite('Git chunk actions', () => {
     let dir = '';
