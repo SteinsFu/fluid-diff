@@ -4,7 +4,10 @@ import { diffLines, splitLines, Chunk } from './diff';
 import { getWebviewContent, Side } from './render';
 import { copyToIndex, getGitRepo, readIndex, revertChunk, undoRevert, GitRepo, RevertHistory } from './git';
 
+let iconPath: vscode.Uri | undefined;
+
 export function activate(context: vscode.ExtensionContext) {
+    iconPath = vscode.Uri.joinPath(context.extensionUri, 'images', 'icon.svg');
     context.subscriptions.push(
         vscode.commands.registerCommand('fluid-diff.fluidDiffGit', diffWithHead),
         // Explorer context menu with two files selected
@@ -111,6 +114,7 @@ async function showPanel(
         enableScripts: true,
         localResourceRoots: [...(vscode.workspace.workspaceFolders ?? []).map(f => f.uri), ...(mathExt ? [mathExt] : [])],
     });
+    panel.iconPath = iconPath;
     const baseHref = panel.webview.asWebviewUri(vscode.Uri.file(path.dirname(baseFile))) + '/';
     const mathCss = mathExt && panel.webview.asWebviewUri(vscode.Uri.joinPath(mathExt, 'notebook-out', 'katex.min.css')).toString();
     let preview = false;
