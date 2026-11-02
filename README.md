@@ -10,6 +10,15 @@ Intuitive Diff UI · Aligned panes · Word-level highlights
 
 [![Version](https://vsmarketplacebadges.dev/version-short/steinsfu.fluid-diff.svg)](https://marketplace.visualstudio.com/items?itemName=steinsfu.fluid-diff) [![Installs](https://vsmarketplacebadges.dev/installs-short/steinsfu.fluid-diff.svg)](https://marketplace.visualstudio.com/items?itemName=steinsfu.fluid-diff) [![Open VSX installs](https://img.shields.io/open-vsx/dt/steinsfu/fluid-diff?label=Open%20VSX%20installs)](https://open-vsx.org/extension/steinsfu/fluid-diff) [![Rating](https://vsmarketplacebadges.dev/rating-short/steinsfu.fluid-diff.svg)](https://marketplace.visualstudio.com/items?itemName=steinsfu.fluid-diff&ssr=false#review-details) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/SteinsFu/fluid-diff?style=flat)](https://github.com/SteinsFu/fluid-diff)
 
+<br>
+
+**Like Fluid Diff?** A GitHub star and a 5-star rating help it reach more people.
+
+[![Star on GitHub](https://img.shields.io/badge/%E2%98%85%20Star%20on%20GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/SteinsFu/fluid-diff) [![Rate 5 stars](https://img.shields.io/badge/%E2%98%85%E2%98%85%E2%98%85%E2%98%85%E2%98%85%20Rate%205%20stars-F5C518?style=for-the-badge&logo=visualstudiocode&logoColor=black)](https://marketplace.visualstudio.com/items?itemName=steinsfu.fluid-diff&ssr=false#review-details)
+
+
+<br>
+
 <img src="images/theme-dark.png" alt="Side-by-side Fluid Diff in VS Code" width="820">
 
 </div>
