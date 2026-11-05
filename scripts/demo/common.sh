@@ -33,6 +33,7 @@ path, color_theme, fluid_theme = sys.argv[1:]
 json.dump({
     "workbench.colorTheme": color_theme,
     "fluid-diff.theme": fluid_theme,
+    "fluid-diff.font": "Medium",
     "window.autoDetectColorScheme": False,
     "window.restoreWindows": "none",
     "window.menuStyle": "custom",
@@ -104,6 +105,24 @@ setup() {
     cp "$HERE/sample/job_queue_old.py" "$DEMO/job-queue/compare/job_queue_v1.py"
     cp "$HERE/sample/job_queue_new.py" "$DEMO/job-queue/compare/job_queue_v2.py"
     cp "$HERE/sample/notes_old.md" "$DEMO/job-queue/notes.md"
+    "$PY" - "$DEMO/job-queue/queue.png" << 'PY'
+import sys
+from PIL import Image, ImageDraw, ImageFont
+path = sys.argv[1]
+im = Image.new("RGB", (520, 140), "#f4f6f8")
+d = ImageDraw.Draw(im)
+font = ImageFont.truetype("/System/Library/Fonts/LucidaGrande.ttc", 22)
+d.rounded_rectangle((8, 8, 511, 131), radius=16, outline="#cbd5e1", width=2)
+x = 28
+for i, (label, color) in enumerate((("arrive", "#dbeafe"), ("wait", "#fef3c7"), ("run", "#dcfce7"))):
+    d.rounded_rectangle((x, 40, x + 120, 100), radius=12, fill=color, outline="#94a3b8", width=2)
+    d.text((x + 60, 70), label, font=font, fill="#1e293b", anchor="mm")
+    if i < 2:
+        d.line((x + 128, 70, x + 150, 70), fill="#64748b", width=3)
+        d.polygon([(x + 158, 70), (x + 148, 64), (x + 148, 76)], fill="#64748b")
+    x += 168
+im.save(path)
+PY
     git -C "$DEMO/job-queue" init -q
     git -C "$DEMO/job-queue" add .
     git -C "$DEMO/job-queue" -c user.name=demo -c user.email=demo@example.com commit -qm "Add job queue"

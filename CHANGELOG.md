@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Each pane has a horizontal scrollbar, including when every line fits. Left and Right scroll sideways. Up and Down scroll by one line. Shift plus an arrow scrolls half a pane. Shift plus the wheel scrolls sideways.
+- Theme **Follow VS Code** uses the applied VS Code theme's colors, including syntax colors. It does not change the font.
+- Font setting **Small**, **Medium** (default), **Large**, and **Follow VS Code**. Follow VS Code uses the editor font, size, weight, and line height.
+
 ## [1.2.0] - 2026-10-17
 
 ### Added

@@ -13,11 +13,20 @@ const rightRuler = document.getElementById('rightRuler');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 // LINE_HEIGHT and PANE_PAD must match .line and .pane in diff-view.css
-const LINE_HEIGHT = 20;
+const rootStyle = getComputedStyle(document.documentElement);
+const LINE_HEIGHT = parseFloat(rootStyle.getPropertyValue('--line-height')) || 20;
 const PANE_PAD = 10;
 const STAGED_FILL = 0.25, STAGED_OUTLINE = 0.5;  // must match .staged in diff-view.css
-const rootStyle = getComputedStyle(document.documentElement);
-const themeColors = prefix => Object.fromEntries(['insert', 'delete', 'replace'].map(t => [t, rootStyle.getPropertyValue(`${prefix}-${t}`).trim()]));
+// Resolve to a real color. Custom properties can hold color-mix(), which canvas does not parse.
+function cssColor(name) {
+  const probe = document.createElement('span');
+  probe.style.color = `var(${name})`;
+  document.body.appendChild(probe);
+  const color = getComputedStyle(probe).color;
+  probe.remove();
+  return color;
+}
+const themeColors = prefix => Object.fromEntries(['insert', 'delete', 'replace'].map(t => [t, cssColor(`${prefix}-${t}`)]));
 const OUTLINE_COLORS = themeColors('--outline');
 const CHUNK_COLORS = themeColors('--chunk');
 
@@ -307,7 +316,7 @@ function drawConnections() {
     curve(ly0, ry0);
     ctx.moveTo(0, ly1);
     curve(ly1, ry1);
-    ctx.strokeStyle = `rgb(${OUTLINE_COLORS[c.tag]})`;
+    ctx.strokeStyle = OUTLINE_COLORS[c.tag];
     ctx.lineWidth = 1;
     ctx.stroke();
   }
@@ -350,8 +359,12 @@ function syncTo(src, dst, from) {
 // update in the same frame, instead of the compositor painting the panes a frame ahead.
 // Inner scrollers (a wide equation, a code block) keep native wheel scrolling while they can move along it.
 let wheel = null;
+let pointerX = null;
+window.addEventListener('pointermove', e => { pointerX = e.clientX; });
 window.addEventListener('wheel', e => {
-  if (innerScroller(e)) return;
+  let dx = e.deltaX, dy = e.deltaY;
+  if (e.shiftKey && dx === 0) { dx = dy; dy = 0; }
+  if (innerScroller(e, dx, dy)) return;
   e.preventDefault();
   const fromLeft = e.clientX < window.innerWidth / 2;
   const src = fromLeft ? leftPane : rightPane;
@@ -363,13 +376,32 @@ window.addEventListener('wheel', e => {
   wheel.src = src;
   wheel.dst = fromLeft ? rightPane : leftPane;
   wheel.from = fromLeft ? 0 : 1;
-  wheel.dx += e.deltaX * k;
-  wheel.dy += e.deltaY * k;
+  wheel.dx += dx * k;
+  wheel.dy += dy * k;
 }, { capture: true, passive: false });
+// Arrows scroll the pane under the pointer (right pane until the pointer moves). Shift uses half the pane.
+window.addEventListener('keydown', e => {
+  const horizontal = e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+  const vertical = e.key === 'ArrowUp' || e.key === 'ArrowDown';
+  if (e.ctrlKey || e.metaKey || (!horizontal && !vertical)) return;
+  if (e.target.closest?.('input, textarea, [contenteditable="true"]')) return;
+  e.preventDefault();
+  const fromLeft = pointerX != null && pointerX < window.innerWidth / 2;
+  const src = fromLeft ? leftPane : rightPane;
+  const step = vertical
+    ? (e.shiftKey ? src.clientHeight / 2 : LINE_HEIGHT)
+    : (e.shiftKey ? src.clientWidth / 2 : 40);
+  const [top, left] = [src.scrollTop, src.scrollLeft];
+  if (vertical) src.scrollTop += e.key === 'ArrowUp' ? -step : step;
+  else src.scrollLeft += e.key === 'ArrowLeft' ? -step : step;
+  if (src.scrollTop !== top || src.scrollLeft !== left) expected.set(src, [src.scrollTop, src.scrollLeft]);
+  syncTo(src, fromLeft ? rightPane : leftPane, fromLeft ? 0 : 1);
+  draw();
+});
 // The element under the pointer, below the panes, that can still scroll along the wheel's main axis
-function innerScroller(e) {
-  const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
-  const d = horizontal ? e.deltaX : e.deltaY;
+function innerScroller(e, dx, dy) {
+  const horizontal = Math.abs(dx) > Math.abs(dy);
+  const d = horizontal ? dx : dy;
   for (let el = e.target.closest?.('.pane *'); el && !el.classList.contains('pane'); el = el.parentElement) {
     const style = getComputedStyle(el);
     const [pos, size, view, overflow] = horizontal

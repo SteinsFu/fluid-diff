@@ -24,6 +24,12 @@ export function activate(context: vscode.ExtensionContext) {
                 await vscode.workspace.getConfiguration('fluid-diff').update('theme', theme, vscode.ConfigurationTarget.Global);
             }
         }),
+        vscode.commands.registerCommand('fluid-diff.selectFont', async () => {
+            const font = await vscode.window.showQuickPick(FONTS, { placeHolder: 'Select a font size' });
+            if (font) {
+                await vscode.workspace.getConfiguration('fluid-diff').update('font', font, vscode.ConfigurationTarget.Global);
+            }
+        }),
     );
 }
 
@@ -122,12 +128,21 @@ async function showPanel(
     const render = async () => {
         const { a, b, indexText } = await load();
         panel.webview.html = await getWebviewContent(a, b, getTheme(),
-            { indexText, preview, baseHref, mathCss, cspSource: panel.webview.cspSource });
+            { indexText, preview, baseHref, mathCss, cspSource: panel.webview.cspSource, font: getFont() });
     };
 
     panel.onDidChangeViewState(() => {
         if (panel.visible) { render().catch(showError); }
     });
+    const refresh = () => { if (panel.visible) { render().catch(showError); } };
+    const watch = vscode.Disposable.from(
+        vscode.window.onDidChangeActiveColorTheme(refresh),
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (['workbench.colorTheme', 'editor.fontFamily', 'editor.fontSize', 'editor.lineHeight', 'editor.fontWeight', 'fluid-diff.theme', 'fluid-diff.font']
+                .some(key => e.affectsConfiguration(key))) { refresh(); }
+        }),
+    );
+    panel.onDidDispose(() => watch.dispose());
     panel.webview.onDidReceiveMessage(async (msg: Message) => {
         try {
             if (msg.type === 'toggleMode') {
@@ -145,14 +160,23 @@ async function showPanel(
 
 // ===== Theme =====
 
-const THEMES = ['Auto', 'Light', 'Dark', 'Dracula'] as const;
+const THEMES = ['Auto', 'Light', 'Dark', 'Dracula', 'Follow VS Code'] as const;
+const FONTS = ['Small', 'Medium', 'Large', 'Follow VS Code'] as const;
 
-// The configured theme in lowercase; Auto follows the VS Code theme
+// The configured theme in lowercase. Auto still picks light or dark. Follow VS Code is `vscode`.
 function getTheme(): string {
     const config = vscode.workspace.getConfiguration('fluid-diff').get<string>('theme', 'Auto');
+    if (config === 'Follow VS Code') { return 'vscode'; }
     if (config === 'Auto') {
         const kind = vscode.window.activeColorTheme.kind;
         return kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight ? 'light' : 'dark';
     }
     return (THEMES as readonly string[]).includes(config) ? config.toLowerCase() : 'dark';
+}
+
+// Small, Medium, and Large are fixed sizes. Follow VS Code is `vscode`.
+function getFont(): string {
+    const config = vscode.workspace.getConfiguration('fluid-diff').get<string>('font', 'Medium');
+    if (config === 'Follow VS Code') { return 'vscode'; }
+    return (FONTS as readonly string[]).includes(config) ? config.toLowerCase() : 'medium';
 }

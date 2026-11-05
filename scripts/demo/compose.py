@@ -2,6 +2,7 @@
 
 Usage:
     python3 compose.py still <raw.png> <out.png>
+    python3 compose.py stack <out.png> <back.png> <mid.png> <front.png>
     python3 compose.py gif <frames_dir> <events.jsonl> <cursor.png> <hotspot-x> <hotspot-y> <cursor-width> <out_dir>
 
     python3 compose.py video <screen.mkv> <events.jsonl> <pixels-per-point> <out.mp4>
@@ -56,6 +57,33 @@ def still(src, dst):
     cap = Image.open(src).convert("RGBA")
     canvas, offset = make_base(cap)
     canvas.alpha_composite(cap, offset)
+    w, h = canvas.size
+    canvas.convert("RGB").resize((STILL_WIDTH, round(h * STILL_WIDTH / w)), Image.Resampling.LANCZOS).save(dst, optimize=True)
+
+
+def window_body(cap):
+    """Window pixels, including the rounded corners, without the desktop shadow."""
+    box = cap.getchannel("A").point(lambda a: 255 if a >= 80 else 0).getbbox()
+    return cap.crop(box)
+
+
+def stack(dst, srcs):
+    """Three window shots, back to front, each stepped down and to the right."""
+    wins = [window_body(Image.open(src).convert("RGBA")) for src in srcs]
+    ww, hh = max(w.width for w in wins), max(w.height for w in wins)
+    gap = round(ww * 0.11)
+    n = len(wins)
+    pad = 72
+    width = ww + gap * (n - 1) + pad * 2
+    height = hh + gap * (n - 1) + pad * 2 + 28
+    canvas = Image.new("RGBA", (width, height), "#FFFFFF")
+    for i, win in enumerate(wins):
+        x, y = pad + gap * i, pad + gap * i
+        shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        ImageDraw.Draw(shadow).rounded_rectangle(
+            (x, y + 20, x + win.width, y + win.height + 20), radius=22, fill=(20, 24, 32, 110))
+        canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(32)))
+        canvas.alpha_composite(win, (x, y))
     w, h = canvas.size
     canvas.convert("RGB").resize((STILL_WIDTH, round(h * STILL_WIDTH / w)), Image.Resampling.LANCZOS).save(dst, optimize=True)
 
@@ -236,6 +264,8 @@ def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "still":
         still(*sys.argv[2:4])
+    elif cmd == "stack":
+        stack(sys.argv[2], sys.argv[3:])
     elif cmd == "video":
         video(sys.argv[2], sys.argv[3], float(sys.argv[4]), sys.argv[5])
     elif cmd == "gif":
