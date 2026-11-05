@@ -162,8 +162,6 @@ Run **Fluid Diff: Select Theme** from the Command Palette, or set `fluid-diff.th
 | Dracula | Follow VS Code |
 | <img src="images/theme-dracula.png" alt="Fluid Diff Dracula theme"> | <img src="images/theme-vscode.png" alt="Fluid Diff following Tomorrow Night Blue, with Monokai and Solarized Light behind"> |
 
-Follow VS Code uses the applied VS Code theme. Tomorrow Night Blue is in front. Monokai and Solarized Light sit behind it.
-
 ## 5. Font
 
 Run **Fluid Diff: Select Font** from the Command Palette, or set `fluid-diff.font` in Settings.
