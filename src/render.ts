@@ -53,6 +53,8 @@ export async function getWebviewContent(a: Side, b: Side, theme: string, opts: R
         diffJs: preview ? diffJs : '',
         // `<` escaped so no value can close the <script> early
         config: JSON.stringify({ chunks, hasGitActions, isMd }).replace(/</g, '\\u003c'),
+        // Empty for the built-in themes, which keep the 20px line box
+        lineHeightStyle: theme === 'vscode' ? `--line-height: ${editorLineHeight()}px` : '',
     };
     // Function replacer: file text may contain `$&`-style patterns that string replacers expand.
     return html.replace(/\{\{(\w+)\}\}/g, (token, key: string) => vars[key] ?? token);
@@ -229,15 +231,166 @@ const LANG_ALIASES: Record<string, string> = {
     snippets: 'jsonc',
 };
 
+function editorLineHeight(): number {
+    const ed = vscode.workspace.getConfiguration('editor');
+    const fontSize = ed.get<number>('fontSize', 14);
+    const lh = ed.get<number>('lineHeight', 0) ?? 0;
+    return lh > 0 ? lh : Math.round(fontSize * 1.35);
+}
+
+// One side of a VS Code color theme after `include` is flattened
+export interface VsCodeTheme {
+    name?: string;
+    type?: string;
+    colors?: Record<string, string>;
+    tokenColors?: object[];
+    semanticTokenColors?: Record<string, string>;
+}
+
+// Parent first, then the including file. Later token rules win.
+export function mergeTheme(base: VsCodeTheme, extra: VsCodeTheme): VsCodeTheme {
+    return {
+        name: extra.name ?? base.name,
+        type: extra.type ?? base.type,
+        colors: { ...base.colors, ...extra.colors },
+        tokenColors: [...(base.tokenColors ?? []), ...(extra.tokenColors ?? [])],
+        semanticTokenColors: { ...base.semanticTokenColors, ...extra.semanticTokenColors },
+    };
+}
+
+// Theme JSON is often JSONC. No dependency: strip comments and trailing commas, then JSON.parse.
+function parseJsonc(text: string): unknown {
+    let out = '';
+    let i = 0;
+    let str = false;
+    let esc = false;
+    const src = text.replace(/^\uFEFF/, '');
+    while (i < src.length) {
+        const c = src[i];
+        if (str) {
+            out += c;
+            if (esc) { esc = false; }
+            else if (c === '\\') { esc = true; }
+            else if (c === '"') { str = false; }
+            i++;
+            continue;
+        }
+        if (c === '"') { str = true; out += c; i++; continue; }
+        if (c === '/' && src[i + 1] === '/') {
+            while (i < src.length && src[i] !== '\n') { i++; }
+            continue;
+        }
+        if (c === '/' && src[i + 1] === '*') {
+            i += 2;
+            while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) { i++; }
+            i += 2;
+            continue;
+        }
+        out += c;
+        i++;
+    }
+    let json = '';
+    str = false;
+    esc = false;
+    for (let j = 0; j < out.length; j++) {
+        const c = out[j];
+        if (str) {
+            json += c;
+            if (esc) { esc = false; }
+            else if (c === '\\') { esc = true; }
+            else if (c === '"') { str = false; }
+            continue;
+        }
+        if (c === '"') { str = true; json += c; continue; }
+        if (c === ',') {
+            let k = j + 1;
+            while (k < out.length && /\s/.test(out[k])) { k++; }
+            if (out[k] === '}' || out[k] === ']') { continue; }
+        }
+        json += c;
+    }
+    return JSON.parse(json);
+}
+
+interface ThemeFile {
+    include?: string;
+    name?: string;
+    type?: string;
+    colors?: Record<string, string>;
+    tokenColors?: object[] | string;
+    semanticTokenColors?: Record<string, string>;
+}
+
+function readTheme(file: string, seen = new Set<string>()): VsCodeTheme | undefined {
+    console.log('readTheme', file);
+    const abs = path.resolve(file);
+    if (seen.has(abs) || abs.endsWith('.tmTheme')) { return; }
+    seen.add(abs);
+    let raw: ThemeFile;
+    try {
+        raw = parseJsonc(fs.readFileSync(abs, 'utf8')) as ThemeFile;
+    } catch {
+        return;
+    }
+    if (typeof raw.tokenColors === 'string') { return; }
+    const theme: VsCodeTheme = {
+        name: raw.name,
+        type: raw.type,
+        colors: raw.colors,
+        tokenColors: raw.tokenColors,
+        semanticTokenColors: raw.semanticTokenColors,
+    };
+    if (!raw.include) { return theme; }
+    const parent = readTheme(path.resolve(path.dirname(abs), raw.include), seen);
+    if (!parent) { return; }
+    return mergeTheme(parent, theme);
+}
+
+// TextMate token colors only. Semantic token colors are not applied.
+// Upgrade: map semantic tokens onto each side when that side has a URI.
+function followedTheme(): (VsCodeTheme & { name: string; type: 'light' | 'dark' }) | undefined {
+    const label = vscode.workspace.getConfiguration('workbench').get<string>('colorTheme');
+    if (!label) { return; }
+    let file: string | undefined;
+    let uiTheme: string | undefined;
+    for (const ext of vscode.extensions.all) {
+        const themes = ext.packageJSON?.contributes?.themes as { id?: string; label?: string; path?: string; uiTheme?: string }[] | undefined;
+        const match = themes?.find(t => t.label === label || t.id === label);
+        if (match?.path) {
+            file = path.join(ext.extensionPath, match.path);
+            uiTheme = match.uiTheme;
+            break;
+        }
+    }
+    if (!file) { return; }
+    const theme = readTheme(file);
+    if (!theme) { return; }
+    const type = theme.type === 'light' || theme.type === 'dark' ? theme.type
+        : uiTheme === 'vs' || uiTheme === 'hc-light' ? 'light' : 'dark';
+    return { ...theme, name: label, type };
+}
+
+function shikiTheme(theme: string): { theme: string | (VsCodeTheme & { name: string; type: 'light' | 'dark' }); colorReplacements?: Record<string, string> } {
+    if (theme === 'vscode') {
+        const loaded = followedTheme();
+        if (loaded) { return { theme: loaded }; }
+        const kind = vscode.window.activeColorTheme.kind;
+        const light = kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight;
+        return { theme: light ? 'light-plus' : 'dark-plus' };
+    }
+    const spec = SHIKI_THEMES[theme] ?? SHIKI_THEMES.dark;
+    return { theme: spec.name, colorReplacements: spec.colorReplacements };
+}
+
 async function syntaxColors(lines: string[], lang: string, theme: string): Promise<ColoredTok[][]> {
     const shiki = await import('shiki');
-    const { name, colorReplacements } = SHIKI_THEMES[theme] ?? SHIKI_THEMES.dark;
+    const picked = shikiTheme(theme);
     lang = LANG_ALIASES[lang] ?? lang;
     const { tokens, fg } = await shiki.codeToTokens(lines.join('\n'), {
         lang: lang in shiki.bundledLanguages ? lang as keyof typeof shiki.bundledLanguages : 'text',
-        theme: name,
-        colorReplacements,
-    });
+        theme: picked.theme,
+        colorReplacements: picked.colorReplacements,
+    } as Parameters<typeof shiki.codeToTokens>[1]);
     return tokens.map(line => {
         const out: ColoredTok[] = [];
         let pos = 0;

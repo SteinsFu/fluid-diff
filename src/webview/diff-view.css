@@ -6,9 +6,9 @@
   --viewport: rgba(255, 255, 255, 0.5);
   --viewport-border: #ffffff;
   --gap: rgba(200, 200, 200, 0.8);
-  --outline-insert: 140, 200, 140;
-  --outline-delete: 240, 140, 140;
-  --outline-replace: 240, 215, 140;
+  --outline-insert: rgb(140, 200, 140);
+  --outline-delete: rgb(240, 140, 140);
+  --outline-replace: rgb(240, 215, 140);
   --chunk-insert: rgb(52, 64, 52);
   --chunk-delete: rgb(72, 52, 52);
   --chunk-replace: rgb(72, 67, 52);
@@ -32,9 +32,9 @@ html[data-theme="light"] {
   --viewport: rgba(0, 0, 0, 0.1);
   --viewport-border: #888888;
   --gap: rgba(120, 120, 120, 0.5);
-  --outline-insert: 40, 190, 20;
-  --outline-delete: 230, 60, 60;
-  --outline-replace: 250, 160, 0;
+  --outline-insert: rgb(40, 190, 20);
+  --outline-delete: rgb(230, 60, 60);
+  --outline-replace: rgb(250, 160, 0);
   --chunk-insert: rgb(212, 242, 208);
   --chunk-delete: rgb(250, 216, 216);
   --chunk-replace: rgb(254, 236, 204);
@@ -58,9 +58,9 @@ html[data-theme="dracula"] {
   --viewport: rgb(77, 68, 90, 0.2);
   --viewport-border: #bd93f9;
   --gap: rgba(98, 114, 164, 0.9);
-  --outline-insert: 80, 250, 123;
-  --outline-delete: 255, 85, 85;
-  --outline-replace: 241, 250, 140;
+  --outline-insert: rgb(80, 250, 123);
+  --outline-delete: rgb(255, 85, 85);
+  --outline-replace: rgb(241, 250, 140);
   --chunk-insert: rgb(48, 84, 68);
   --chunk-delete: rgb(83, 51, 60);
   --chunk-replace: rgb(80, 84, 71);
@@ -75,6 +75,37 @@ html[data-theme="dracula"] {
   --word-replace-underline: rgba(241, 250, 140, 0.6);
   --word-gap-insert: rgb(80, 250, 123);
   --word-gap-delete: rgb(255, 85, 85);
+}
+html[data-theme="vscode"] {
+  --bg: var(--vscode-editor-background);
+  --fg: var(--vscode-editor-foreground);
+  --chrome: var(--vscode-editorGroupHeader-tabsBackground);
+  --muted: var(--vscode-editorLineNumber-foreground);
+  --viewport: var(--vscode-scrollbarSlider-background);
+  --viewport-border: var(--vscode-scrollbarSlider-hoverBackground, var(--vscode-editor-foreground));
+  --gap: var(--vscode-editorGroup-border, var(--vscode-panel-border));
+  --outline-insert: var(--vscode-editorGutter-addedBackground);
+  --outline-delete: var(--vscode-editorGutter-deletedBackground);
+  --outline-replace: var(--vscode-editorGutter-modifiedBackground);
+  --chunk-insert: var(--vscode-diffEditor-insertedLineBackground);
+  --chunk-delete: var(--vscode-diffEditor-removedLineBackground);
+  --chunk-replace: color-mix(in srgb, var(--vscode-editorGutter-modifiedBackground) 35%, transparent);
+  --ruler-mark-insert: var(--vscode-editorOverviewRuler-addedForeground);
+  --ruler-mark-delete: var(--vscode-editorOverviewRuler-deletedForeground);
+  --ruler-mark-replace: var(--vscode-editorOverviewRuler-modifiedForeground);
+  --word-insert: var(--vscode-diffEditor-insertedTextBackground);
+  --word-delete: var(--vscode-diffEditor-removedTextBackground);
+  --word-replace: color-mix(in srgb, var(--vscode-editorGutter-modifiedBackground) 45%, transparent);
+  --word-insert-underline: var(--vscode-editorGutter-addedBackground);
+  --word-delete-underline: var(--vscode-editorGutter-deletedBackground);
+  --word-replace-underline: var(--vscode-editorGutter-modifiedBackground);
+  --word-gap-insert: var(--vscode-editorGutter-addedBackground);
+  --word-gap-delete: var(--vscode-editorGutter-deletedBackground);
+}
+html[data-theme="vscode"] body {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--vscode-editor-font-size);
+  font-weight: var(--vscode-editor-font-weight);
 }
 
 body {
@@ -137,16 +168,28 @@ body {
   flex: 0 0 calc(50% - 30px - 10px); /* half width - half gutter - ruler width */
   width: calc(50% - 30px - 10px);
   min-width: 0;
-  overflow: auto;
+  /* Horizontal bar always visible. Vertical stays hidden: the ruler is that control.
+     overflow-y hidden still accepts scrollTop from the wheel handler and the ruler.
+     Custom webkit scrollbar rules force a classic bar, which would steal width if the vertical one were auto. */
+  overflow-x: scroll;
+  overflow-y: hidden;
   padding: 10px 0;
   white-space: pre;
   position: relative;
   box-sizing: border-box;
-  scrollbar-width: none;
+  scrollbar-color: var(--muted) transparent;
 }
 
 .pane::-webkit-scrollbar {
-  display: none;
+  height: 10px;
+  width: 0;
+}
+.pane::-webkit-scrollbar:vertical { 
+  display: none; 
+}
+.pane::-webkit-scrollbar-thumb:horizontal {
+  background: var(--muted);
+  border-radius: 5px;
 }
 
 .ruler {
@@ -179,12 +222,13 @@ body {
   cursor: pointer;
 }
 
-/* LINE_HEIGHT and PANE_PAD in the script must match these */
+/* LINE_HEIGHT and PANE_PAD in the script must match these. --line-height is set for Follow VS Code. */
 .line {
-  height: 20px;
-  line-height: 20px;
+  height: var(--line-height, 20px);
+  line-height: var(--line-height, 20px);
   padding-right: 60px;
   background: var(--bg);
+  --row: var(--bg);
 }
 
 /* As wide as the longest line, so every row's background spans the full scroll width */
@@ -231,7 +275,7 @@ html[data-mode="preview"] .word-insert, html[data-mode="preview"] .word-delete, 
 html[data-mode="preview"] .word-gap-insert, html[data-mode="preview"] .word-gap-delete { height: 1.2em; vertical-align: text-bottom; }
 /* Chunk backgrounds in preview, positioned from the line-to-pixel table */
 .band { position: absolute; left: 0; right: 0; }
-.band.gap { border-top: 1px solid rgba(var(--outline), var(--outline-alpha, 1)); }
+.band.gap { border-top: 1px solid color-mix(in srgb, var(--outline) calc(var(--outline-alpha, 1) * 100%), transparent); }
 
 .line-num {
   display: inline-block;
@@ -240,29 +284,34 @@ html[data-mode="preview"] .word-gap-insert, html[data-mode="preview"] .word-gap-
   text-align: right;
   color: var(--muted);
   user-select: none;
-  /* Pinned during horizontal scroll; copies the row's background and outline so text slides under it */
+  /* Pinned during horizontal scroll. Diff fills are often translucent, so paint the row color
+     over an opaque editor background. Otherwise scrolled text shows through the gutter. */
   position: sticky;
   left: 0;
   z-index: 1;
-  background: inherit;
+  background-color: var(--bg);
+  background-image: var(--dash-top, none), var(--dash-bottom, none), linear-gradient(var(--row), var(--row));
+  background-repeat: no-repeat;
+  background-size: 100% 1px, 100% 1px, auto;
+  background-position: top, bottom, center;
   box-shadow: inherit;
 }
 
 /* The chunk backgrounds */
-.chunk-insert { background: var(--chunk-insert); --outline: var(--outline-insert); }
-.chunk-delete { background: var(--chunk-delete); --outline: var(--outline-delete); }
-.chunk-replace { background: var(--chunk-replace); --outline: var(--outline-replace); }
+.chunk-insert { background: var(--chunk-insert); --outline: var(--outline-insert); --row: var(--chunk-insert); }
+.chunk-delete { background: var(--chunk-delete); --outline: var(--outline-delete); --row: var(--chunk-delete); }
+.chunk-replace { background: var(--chunk-replace); --outline: var(--outline-replace); --row: var(--chunk-replace); }
 
 /* Chunk outlines: top edge of first line, bottom edge of last line, matching the gutter curves */
-.chunk-start { box-shadow: inset 0 1px 0 rgba(var(--outline), var(--outline-alpha, 1)); }
-.chunk-end { box-shadow: inset 0 -1px 0 rgba(var(--outline), var(--outline-alpha, 1)); }
-.chunk-start.chunk-end { box-shadow: inset 0 1px 0 rgba(var(--outline), var(--outline-alpha, 1)), inset 0 -1px 0 rgba(var(--outline), var(--outline-alpha, 1)); }
+.chunk-start { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--outline) calc(var(--outline-alpha, 1) * 100%), transparent); }
+.chunk-end { box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--outline) calc(var(--outline-alpha, 1) * 100%), transparent); }
+.chunk-start.chunk-end { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--outline) calc(var(--outline-alpha, 1) * 100%), transparent), inset 0 -1px 0 color-mix(in srgb, var(--outline) calc(var(--outline-alpha, 1) * 100%), transparent); }
 
 /* The word highlights */
 .word-insert, .word-delete, .word-replace {
   display: inline-block;
-  height: 20px;
-  line-height: 20px;
+  height: var(--line-height, 20px);
+  line-height: var(--line-height, 20px);
   vertical-align: top;
   border-radius: 2px;
 }
@@ -274,7 +323,7 @@ html[data-mode="preview"] .word-gap-insert, html[data-mode="preview"] .word-gap-
 .word-gap-insert, .word-gap-delete { 
   display: inline-block;
   width: 0;
-  height: 20px;
+  height: var(--line-height, 20px);
   vertical-align: top;
   position: relative;
 }
@@ -340,8 +389,8 @@ html[data-mode="preview"] .chunk-actions-container { margin-left: -16px; }
   background: color-mix(in srgb, var(--btn-color) 20%, var(--chrome));
 }
 .chunk-actions button:disabled { opacity: 0.35; cursor: default; }
-.chunk-actions .revert { --btn-color: rgb(var(--outline-delete)); }
-.chunk-actions .stage { --btn-color: rgb(var(--outline-insert)); }
+.chunk-actions .revert { --btn-color: var(--outline-delete); }
+.chunk-actions .stage { --btn-color: var(--outline-insert); }
 .chunk-actions .unstage { --btn-color: var(--muted); }
 .chunk-actions svg {
   width: 12px;
@@ -356,15 +405,15 @@ html[data-mode="preview"] .chunk-actions-container { margin-left: -16px; }
 /* Staged chunks: faded fill, dashed outlines. STAGED_FILL and STAGED_OUTLINE in the script must match. */
 .staged { 
   --outline-alpha: 0.5; 
-  --dash: repeating-linear-gradient(90deg, rgba(var(--outline), var(--outline-alpha)) 0 3px, transparent 3px 6px);
+  --dash: repeating-linear-gradient(90deg, color-mix(in srgb, var(--outline) calc(var(--outline-alpha) * 100%), transparent) 0 3px, transparent 3px 6px);
 }
-.staged.chunk-insert  { background-color: color-mix(in srgb, var(--chunk-insert) 25%, var(--bg)); }
-.staged.chunk-delete  { background-color: color-mix(in srgb, var(--chunk-delete) 25%, var(--bg)); }
-.staged.chunk-replace { background-color: color-mix(in srgb, var(--chunk-replace) 25%, var(--bg)); }
+.staged.chunk-insert  { background-color: color-mix(in srgb, var(--chunk-insert) 25%, var(--bg)); --row: color-mix(in srgb, var(--chunk-insert) 25%, var(--bg)); }
+.staged.chunk-delete  { background-color: color-mix(in srgb, var(--chunk-delete) 25%, var(--bg)); --row: color-mix(in srgb, var(--chunk-delete) 25%, var(--bg)); }
+.staged.chunk-replace { background-color: color-mix(in srgb, var(--chunk-replace) 25%, var(--bg)); --row: color-mix(in srgb, var(--chunk-replace) 25%, var(--bg)); }
 /* box-shadow can't be dashed, so draw the edges as 1px gradient strips */
 .staged.chunk-start, .staged.chunk-end { box-shadow: none; background-repeat: no-repeat; background-size: 100% 1px; }
-.staged.chunk-start { background-image: var(--dash); background-position: top; }
-.staged.chunk-end { background-image: var(--dash); background-position: bottom; }
+.staged.chunk-start { background-image: var(--dash); background-position: top; --dash-top: var(--dash); }
+.staged.chunk-end { background-image: var(--dash); background-position: bottom; --dash-bottom: var(--dash); }
 .staged.chunk-start.chunk-end { background-image: var(--dash), var(--dash); background-position: top, bottom; }
 
 canvas {

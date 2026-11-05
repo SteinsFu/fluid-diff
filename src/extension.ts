@@ -128,6 +128,15 @@ async function showPanel(
     panel.onDidChangeViewState(() => {
         if (panel.visible) { render().catch(showError); }
     });
+    const refresh = () => { if (panel.visible) { render().catch(showError); } };
+    const watch = vscode.Disposable.from(
+        vscode.window.onDidChangeActiveColorTheme(refresh),
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (['workbench.colorTheme', 'editor.fontFamily', 'editor.fontSize', 'editor.lineHeight', 'editor.fontWeight', 'fluid-diff.theme']
+                .some(key => e.affectsConfiguration(key))) { refresh(); }
+        }),
+    );
+    panel.onDidDispose(() => watch.dispose());
     panel.webview.onDidReceiveMessage(async (msg: Message) => {
         try {
             if (msg.type === 'toggleMode') {
@@ -145,11 +154,12 @@ async function showPanel(
 
 // ===== Theme =====
 
-const THEMES = ['Auto', 'Light', 'Dark', 'Dracula'] as const;
+const THEMES = ['Auto', 'Light', 'Dark', 'Dracula', 'Follow VS Code'] as const;
 
-// The configured theme in lowercase; Auto follows the VS Code theme
+// The configured theme in lowercase. Auto still picks light or dark. Follow VS Code is `vscode`.
 function getTheme(): string {
     const config = vscode.workspace.getConfiguration('fluid-diff').get<string>('theme', 'Auto');
+    if (config === 'Follow VS Code') { return 'vscode'; }
     if (config === 'Auto') {
         const kind = vscode.window.activeColorTheme.kind;
         return kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight ? 'light' : 'dark';

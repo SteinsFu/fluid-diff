@@ -146,8 +146,9 @@ Run **Fluid Diff: Select Theme** from the Command Palette, or set `fluid-diff.th
 | `Light` | Light background, VS Code Light+ syntax colors |
 | `Dark` | Dark background, VS Code Dark+ syntax colors |
 | `Dracula` | Dracula palette, with comments brightened for readability |
+| `Follow VS Code` | Editor font, UI colors, and syntax colors from the applied VS Code theme |
 
-The theme applies to diff panels opened after the change.
+An open panel updates when this setting, the VS Code color theme, or the editor font changes.
 
 | Light | Dark | Dracula |
 | --- | --- | --- |
@@ -163,7 +164,7 @@ The theme applies to diff panels opened after the change.
 - **Chunk actions.** In Git diffs, stage, unstage, or revert a single chunk from the diff view.
 - **Compare any two selected files.** Pick two files in the Explorer and open them side by side. This command reads the two files directly.
 - **Reopen any VS Code diff.** From a built-in single-file diff, such as a past commit in the Timeline view, reopen the same two sides in Fluid Diff.
-- **Themes.** Auto, Light, Dark, and Dracula. Auto follows the VS Code color theme.
+- **Themes.** Auto, Light, Dark, Dracula, and Follow VS Code. Auto follows whether VS Code is light or dark. Follow VS Code uses the applied theme's font and colors.
 - **Markdown preview.** When both files are Markdown, switch between the source and a rendered preview. Math is typeset with KaTeX. Changed blocks stay highlighted.
 
 ## Requirements

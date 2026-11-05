@@ -6,7 +6,7 @@ import { execFileSync } from 'child_process';
 
 import * as vscode from 'vscode';
 import { diffBlock, diffLines, diffWords } from '../diff';
-import { getWebviewContent } from '../render';
+import { getWebviewContent, mergeTheme } from '../render';
 import { copyToIndex, revertChunk, undoRevert, RevertHistory } from '../git';
 
 const ext = () => vscode.extensions.all.find(e => e.packageJSON.name === 'fluid-diff')!;
@@ -114,6 +114,27 @@ suite('Webview content', () => {
         assert.strictEqual(texHtml.match(/\\\[b\\\]/g)?.length, 2);
         const raw = await getWebviewContent(md, md, 'dark', { mathCss: 'https://base/katex.min.css' });
         assert.ok(!raw.includes('katex.min.css'));
+    });
+
+    test('follow vscode theme hooks the editor font', async () => {
+        const html = await getWebviewContent(side('a', 'plaintext', 'a'), side('b', 'plaintext', 'b'), 'vscode');
+        assert.ok(html.includes('data-theme="vscode"'));
+        assert.ok(html.includes('--vscode-editor-font-family'));
+        assert.ok(html.includes('--line-height:'));
+        assert.ok(!/\{\{\w+\}\}/.test(html));
+    });
+
+    test('mergeTheme lets the including file override colors and append token rules', () => {
+        assert.deepStrictEqual(mergeTheme(
+            { colors: { a: '1', b: '2' }, tokenColors: [{ scope: 'a' }] },
+            { colors: { b: '3' }, tokenColors: [{ scope: 'b' }] },
+        ), {
+            name: undefined,
+            type: undefined,
+            colors: { a: '1', b: '3' },
+            tokenColors: [{ scope: 'a' }, { scope: 'b' }],
+            semanticTokenColors: {},
+        });
     });
 });
 
