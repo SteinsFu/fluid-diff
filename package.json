@@ -57,6 +57,10 @@
         "title": "Fluid Diff: Select Theme"
       },
       {
+        "command": "fluid-diff.selectFont",
+        "title": "Fluid Diff: Select Font"
+      },
+      {
         "command": "fluid-diff.fromDiffEditor",
         "title": "Fluid Diff: From Diff Editor",
         "icon": "images/icon.svg"
@@ -101,7 +105,18 @@
             "Follow VS Code"
           ],
           "default": "Auto",
-          "description": "Color theme for the Fluid Diff view. Auto chooses light or dark based on the VS Code theme. Follow VS Code uses the applied theme's font and colors."
+          "description": "Color theme for the Fluid Diff view. Auto chooses light or dark based on the VS Code theme. Follow VS Code uses the applied theme's colors only."
+        },
+        "fluid-diff.font": {
+          "type": "string",
+          "enum": [
+            "Small",
+            "Medium",
+            "Large",
+            "Follow VS Code"
+          ],
+          "default": "Medium",
+          "description": "Font for the Fluid Diff view. Small, Medium, and Large are fixed sizes. Follow VS Code uses the editor font, size, weight, and line height."
         }
       }
     }

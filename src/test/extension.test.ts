@@ -55,7 +55,7 @@ suite('Extension Test Suite', () => {
 
     test('all commands are registered', async () => {
         const all = await vscode.commands.getCommands(true);
-        for (const id of ['fluidDiffGit', 'fluidDiffSelected', 'selectTheme', 'fromDiffEditor']) {
+        for (const id of ['fluidDiffGit', 'fluidDiffSelected', 'selectTheme', 'selectFont', 'fromDiffEditor']) {
             assert.ok(all.includes(`fluid-diff.${id}`), id);
         }
     });
@@ -116,11 +116,17 @@ suite('Webview content', () => {
         assert.ok(!raw.includes('katex.min.css'));
     });
 
-    test('follow vscode theme hooks the editor font', async () => {
+    test('follow vscode theme applies colors only', async () => {
         const html = await getWebviewContent(side('a', 'plaintext', 'a'), side('b', 'plaintext', 'b'), 'vscode');
         assert.ok(html.includes('data-theme="vscode"'));
+        assert.match(html, /<html[^>]*data-font="medium"[^>]*style=""/);
+        assert.ok(!/\{\{\w+\}\}/.test(html));
+    });
+
+    test('follow vscode font hooks the editor font', async () => {
+        const html = await getWebviewContent(side('a', 'plaintext', 'a'), side('b', 'plaintext', 'b'), 'dark', { font: 'vscode' });
+        assert.match(html, /<html[^>]*data-font="vscode"[^>]*style="--line-height: \d+px"/);
         assert.ok(html.includes('--vscode-editor-font-family'));
-        assert.ok(html.includes('--line-height:'));
         assert.ok(!/\{\{\w+\}\}/.test(html));
     });
 

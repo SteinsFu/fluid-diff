@@ -102,22 +102,26 @@ html[data-theme="vscode"] {
   --word-gap-insert: var(--vscode-editorGutter-addedBackground);
   --word-gap-delete: var(--vscode-editorGutter-deletedBackground);
 }
-html[data-theme="vscode"] body {
-  font-family: var(--vscode-editor-font-family, monospace);
-  font-size: var(--vscode-editor-font-size);
-  font-weight: var(--vscode-editor-font-weight);
-}
+html[data-font="small"] { --font-size: 11px; --line-height: 16px; }
+html[data-font="medium"] { --font-size: 13px; --line-height: 20px; }
+html[data-font="large"] { --font-size: 16px; --line-height: 24px; }
 
 body {
   display: flex;
   flex-direction: column;
   font-family: monospace;
+  font-size: var(--font-size, 13px);
   margin: 0;
   padding: 0;
   background: var(--bg);
   color: var(--fg);
   height: 100vh;
   overflow: hidden;
+}
+html[data-font="vscode"] body {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--vscode-editor-font-size);
+  font-weight: var(--vscode-editor-font-weight);
 }
 
 .main {
@@ -222,7 +226,7 @@ body {
   cursor: pointer;
 }
 
-/* LINE_HEIGHT and PANE_PAD in the script must match these. --line-height is set for Follow VS Code. */
+/* LINE_HEIGHT and PANE_PAD in the script must match these. --line-height comes from the font setting. */
 .line {
   height: var(--line-height, 20px);
   line-height: var(--line-height, 20px);
@@ -249,8 +253,12 @@ html[data-mode="preview"] .lines {
   padding: 0 16px;
   white-space: normal;
   font-family: var(--vscode-font-family, sans-serif);
-  font-size: 14px;
+  font-size: var(--font-size, 13px);
   line-height: 1.5;
+}
+html[data-font="vscode"][data-mode="preview"] .lines {
+  font-size: var(--vscode-font-size);
+  font-weight: var(--vscode-font-weight);
 }
 /* Positioned content paints above the bands, which come first in the DOM */
 html[data-mode="preview"] .lines > :not(.band):not(.chunk-actions-container) { position: relative; }

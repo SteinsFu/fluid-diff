@@ -18,6 +18,7 @@ export interface RenderOptions {
     baseHref?: string;    // resolves relative links and images in the markdown preview
     mathCss?: string;     // KaTeX stylesheet for math in the markdown preview
     cspSource?: string;   // webview.cspSource, allowed to serve images and styles
+    font?: string;        // small, medium, large, or vscode (editor font). Default medium
 }
 
 export async function getWebviewContent(a: Side, b: Side, theme: string, opts: RenderOptions = {}): Promise<string> {
@@ -36,8 +37,10 @@ export async function getWebviewContent(a: Side, b: Side, theme: string, opts: R
         : await renderRaw(linesA, linesB, a.lang, b.lang, chunks, theme);
 
     const { html, css, js, diffJs } = loadAssets();
+    const font = opts.font ?? 'medium';
     const vars: Record<string, string> = {
         theme,
+        font,
         mode: preview ? 'preview' : 'raw',
         nonce: randomBytes(16).toString('base64'),
         cspSource: opts.cspSource ?? '',
@@ -53,8 +56,8 @@ export async function getWebviewContent(a: Side, b: Side, theme: string, opts: R
         diffJs: preview ? diffJs : '',
         // `<` escaped so no value can close the <script> early
         config: JSON.stringify({ chunks, hasGitActions, isMd }).replace(/</g, '\\u003c'),
-        // Empty for the built-in themes, which keep the 20px line box
-        lineHeightStyle: theme === 'vscode' ? `--line-height: ${editorLineHeight()}px` : '',
+        // Presets set --line-height in CSS. Follow VS Code uses the editor line height.
+        lineHeightStyle: font === 'vscode' ? `--line-height: ${editorLineHeight()}px` : '',
     };
     // Function replacer: file text may contain `$&`-style patterns that string replacers expand.
     return html.replace(/\{\{(\w+)\}\}/g, (token, key: string) => vars[key] ?? token);

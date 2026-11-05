@@ -39,9 +39,9 @@ Intuitive Diff UI · Aligned panes · Word-level highlights
 
 ---
 
-## Quick start
+## 1. Quick start
 
-### Git diff
+### 1.1 Git diff
 
 1. Open a file tracked by Git.
 2. Run **Fluid Diff: Git**.
@@ -55,7 +55,7 @@ Intuitive Diff UI · Aligned panes · Word-level highlights
   <img src="images/demo-git.gif" alt="Open the Command Palette, run Fluid Diff: Git, and read the diff" width="820">
 </p>
 
-### Stage, unstage, and revert chunks
+#### Stage, unstage, and revert chunks
 
 In **Fluid Diff: Git**, each changed chunk has buttons at the right edge of the right pane, just above the chunk.
 
@@ -77,21 +77,7 @@ In **Fluid Diff: Git**, each changed chunk has buttons at the right edge of the 
   <em>Revert two chunks, then stage and unstage two more.</em>
 </p>
 
-### Selected files
-
-1. In the Explorer, select exactly two files.
-2. Right-click and run **Fluid Diff: Compare Selected**.
-3. Read the diff:
-
-   | Left pane | Right pane |
-   | --- | --- |
-   | First file in the selection | Second file in the selection |
-
-<p align="center">
-  <img src="images/demo-compare.gif" alt="Select two files in the Explorer, right-click, and run Fluid Diff: Compare Selected" width="820">
-</p>
-
-### From a diff editor
+### 1.2 From a diff editor
 
 1. Open a single-file diff in VS Code, for example from the Source Control view or the Timeline view.
 2. Click the **Fluid Diff: From Diff Editor** icon in the editor title bar. If you don't see the icon, click **...** in the editor title bar and pick **Fluid Diff: From Diff Editor** from the menu.
@@ -107,7 +93,21 @@ In **Fluid Diff: Git**, each changed chunk has buttons at the right edge of the 
 
 Multi-file diffs, such as a whole commit opened from the Source Control Graph, are not supported. Open a single file's diff instead.
 
-## Ways to open it
+### 1.3 Compare two files
+
+1. In the Explorer, select exactly two files.
+2. Right-click and run **Fluid Diff: Compare Selected**.
+3. Read the diff:
+
+   | Left pane | Right pane |
+   | --- | --- |
+   | First file in the selection | Second file in the selection |
+
+<p align="center">
+  <img src="images/demo-compare.gif" alt="Select two files in the Explorer, right-click, and run Fluid Diff: Compare Selected" width="820">
+</p>
+
+## 2. Ways to open it
 
 | Where | How |
 | --- | --- |
@@ -122,7 +122,7 @@ Multi-file diffs, such as a whole commit opened from the Source Control Graph, a
   <img src="images/command.png" alt="Fluid Diff: Git in the VS Code Command Palette" width="820">
 </p>
 
-## Markdown preview
+## 3. Markdown preview
 
 When both files are Markdown, a **Preview** button sits between the two paths. Click it to render both panes, including math. **Raw** switches back to the source. Chunk colors, word highlights, and aligned scrolling stay on.
 
@@ -136,7 +136,7 @@ When both files are Markdown, a **Preview** button sits between the two paths. C
   <em>Click Preview to render the Markdown, including the changed equation.</em>
 </p>
 
-## Themes
+## 4. Themes
 
 Run **Fluid Diff: Select Theme** from the Command Palette, or set `fluid-diff.theme` in Settings.
 
@@ -146,15 +146,26 @@ Run **Fluid Diff: Select Theme** from the Command Palette, or set `fluid-diff.th
 | `Light` | Light background, VS Code Light+ syntax colors |
 | `Dark` | Dark background, VS Code Dark+ syntax colors |
 | `Dracula` | Dracula palette, with comments brightened for readability |
-| `Follow VS Code` | Editor font, UI colors, and syntax colors from the applied VS Code theme |
-
-An open panel updates when this setting, the VS Code color theme, or the editor font changes.
+| `Follow VS Code` | UI colors and syntax colors from the applied VS Code theme |
 
 | Light | Dark | Dracula |
 | --- | --- | --- |
 | <img src="images/theme-light.png" alt="Fluid Diff Light theme"> | <img src="images/theme-dark.png" alt="Fluid Diff Dark theme"> | <img src="images/theme-dracula.png" alt="Fluid Diff Dracula theme"> |
 
-## Features
+## 5. Font
+
+Run **Fluid Diff: Select Font** from the Command Palette, or set `fluid-diff.font` in Settings.
+
+| Font | Look |
+| --- | --- |
+| `Small` | 11px monospace, 16px line |
+| `Medium` (default) | 13px monospace, 20px line |
+| `Large` | 16px monospace, 24px line |
+| `Follow VS Code` | Editor font, size, weight, and line height |
+
+An open panel updates when either setting, the VS Code color theme, or the editor font changes.
+
+## 6. Features
 
 - **Aligned panes.** Inserted or deleted lines never push the two sides out of step.
 - **Block colors.** Inserted, deleted, and replaced blocks each get their own background.
@@ -164,15 +175,16 @@ An open panel updates when this setting, the VS Code color theme, or the editor 
 - **Chunk actions.** In Git diffs, stage, unstage, or revert a single chunk from the diff view.
 - **Compare any two selected files.** Pick two files in the Explorer and open them side by side. This command reads the two files directly.
 - **Reopen any VS Code diff.** From a built-in single-file diff, such as a past commit in the Timeline view, reopen the same two sides in Fluid Diff.
-- **Themes.** Auto, Light, Dark, Dracula, and Follow VS Code. Auto follows whether VS Code is light or dark. Follow VS Code uses the applied theme's font and colors.
+- **Themes.** Auto, Light, Dark, Dracula, and Follow VS Code. Auto follows whether VS Code is light or dark. Follow VS Code uses the applied theme's colors.
+- **Font.** Small, Medium, Large, or Follow VS Code. Follow VS Code uses the editor font, size, weight, and line height.
 - **Markdown preview.** When both files are Markdown, switch between the source and a rendered preview. Math is typeset with KaTeX. Changed blocks stay highlighted.
 
-## Requirements
+## 7. Requirements
 
 - VS Code `1.128.0` or newer
 - Built-in **Git** extension enabled
 
-## Troubleshooting
+## 8. Troubleshooting
 
 These messages come from **Fluid Diff: Git**. If a check fails, the panel stays closed.
 
@@ -189,7 +201,7 @@ These messages come from the chunk buttons. The panel stays open.
 | File changed since render; view refreshed | The file changed after the view was drawn, so the button's chunk no longer exists. Click the button again in the refreshed view |
 | File was edited after the revert | `Ctrl+Z` in the panel won't overwrite later edits. Use undo in the editor instead |
 
-## Roadmap
+## 9. Roadmap
 
 - [x] Compare the active file with its `HEAD` version
 - [x] Compare any two selected files
@@ -201,13 +213,13 @@ These messages come from the chunk buttons. The panel stays open.
 - [ ] Open changes from git graph
 - [ ] word-level highlight in math equation
 
-## Limits
+## 10. Limits
 
 - A gap bigger than 25M cells (about 5000×5000 lines) with no unique line inside becomes one replace chunk.
 - Edit-similarity scoring only runs on gaps up to 1M cells.
 - A chunk larger than 4M token pairs gets background color only, no word marks.
 
-## Development
+## 11. Development
 
 ```bash
 npm install
