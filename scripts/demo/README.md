@@ -5,15 +5,17 @@ These scripts regenerate the screenshots and GIFs used in the top-level `README.
 | Output | Content |
 | --- | --- |
 | `images/theme-dark.png` | Fluid Diff in the Dark theme (also the README hero image) |
-| `images/theme-light.png`, `images/theme-dracula.png` | Fluid Diff in the other themes |
-| `images/command.png` | Command Palette filtered to "Fluid Diff: Git" |
+| `images/theme-light.png`, `images/theme-dracula.png` | Fluid Diff in the Light and Dracula themes |
+| `images/theme-vscode.png` | Follow VS Code, three themes stacked: Solarized Light, Monokai, Tomorrow Night Blue |
+| `images/command.png` | Command Palette filtered to "Fluid Diff" |
 | `images/demo-preview.gif` | Scrolling through the diff, first over the right pane, then the left |
 | `images/demo-ruler.gif` | Hovering ruler marks, then clicking one to jump to its chunk |
 | `images/demo-git.gif` | Command Palette, then **Fluid Diff: Git** |
 | `images/demo-compare.gif` | Explorer selection, right-click, then **Fluid Diff: Compare Selected** |
 | `images/demo-timeline.gif` | Timeline diff, then the **Fluid Diff: From Diff Editor** title-bar icon |
 | `images/demo-chunks.gif` | Revert two chunks, then stage and unstage two more. Each click shows a caption |
-| `images/demo-md.gif` | Raw Markdown diff of a note with math, then **Preview** renders both panes |
+| `images/demo-md.gif` | Raw Markdown note (lists, table, figure, code, math), then **Preview**, then a scroll |
+| `images/demo-font.gif` | Command Palette, then **Fluid Diff: Select Font**: Large, Small, then Follow VS Code |
 | `videos/clips/*.mp4` | 60 fps recording of the default GIF scenes, plus `words`, `theme`, `preview-light` and `preview-dracula`, which have no GIF. `md` is not in that default run |
 | `videos/fluid-diff-short.mp4` | Vertical 1080×1920 reel at 60 fps, under 60 seconds, with headlines, word-by-word captions and upbeat house music |
 | `videos/fluid-diff-long.mp4` | Horizontal 1920×1080 tour of every feature at 60 fps, over 60 seconds, with chapter titles, subtitles and lo-fi music |
@@ -46,6 +48,7 @@ To redo only some outputs, name them:
 scripts/demo/make-images.sh stills              # theme PNGs and command.png
 scripts/demo/make-images.sh git chunks          # just these two GIFs
 scripts/demo/make-images.sh md                 # Markdown preview GIF (notes.md, with math)
+scripts/demo/make-images.sh font               # Select Font GIF
 scripts/demo/make-videos.sh ruler render      # re-record one clip, then re-cut both videos
 scripts/demo/make-videos.sh preview-light     # records scenes/preview.json in the Light theme
 scripts/demo/make-videos.sh render            # re-cut both videos from the existing clips, no VS Code

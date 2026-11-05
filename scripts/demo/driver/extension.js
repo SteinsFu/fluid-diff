@@ -50,12 +50,12 @@ async function activate() {
         await run('notifications.clearAll');
         if (mode === 'palette') {
             await delay(300);
-            await showQuery('>Fluid Diff: Git');
+            await showQuery('>Fluid Diff');
             await delay(300);
         } else if (mode === 'diff') {
             await run('fluid-diff.fluidDiffGit');
             await delay(600);
-        } else if (mode === 'gif-preview' || mode === 'gif-ruler' || mode === 'gif-words' || mode === 'gif-chunks') {
+        } else if (mode === 'gif-preview' || mode === 'gif-ruler' || mode === 'gif-words' || mode === 'gif-chunks' || mode === 'gif-font') {
             await run('fluid-diff.fluidDiffGit');
             await delay(1500);
         } else if (mode === 'gif-md') {

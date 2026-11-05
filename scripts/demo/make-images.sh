@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # Regenerates the README demo assets from a real VS Code window:
-#   images/theme-{dark,light,dracula}.png   Fluid Diff in each theme (dark is the README hero)
-#   images/command.png                      Command Palette filtered to "Fluid Diff: Git"
+#   images/theme-{dark,light,dracula,vscode}.png  Fluid Diff in each theme (dark is the README hero).
+#                                                 vscode stacks Solarized Light, Monokai, and Tomorrow Night Blue.
+#   images/command.png                      Command Palette filtered to "Fluid Diff"
 #   images/demo-{preview,ruler}.gif         scrolling the diff; hovering and clicking ruler marks
 #   images/demo-{git,compare,timeline}.gif  one GIF per way of opening Fluid Diff
-#   images/demo-chunks.gif                  revert, undo, stage, and unstage one chunk
+#   images/demo-chunks.gif                  revert, stage, and unstage chunks
 #   images/demo-md.gif                      raw Markdown diff, then Preview with rendered math
+#   images/demo-font.gif                    Command Palette, then Fluid Diff: Select Font
 # The narrated videos are make-videos.sh.
 #
-# Usage: scripts/demo/make-images.sh [stills] [preview] [ruler] [git] [compare] [timeline] [chunks] [md]   (default: all)
+# Usage: scripts/demo/make-images.sh [stills] [preview] [ruler] [git] [compare] [timeline] [chunks] [md] [font]   (default: all)
 #
 # macOS only. Needs: VS Code with the `code` CLI, Xcode command line tools (swift),
 # gifski (`brew install gifski`), python3 with Pillow (`pip install pillow`).
@@ -19,12 +21,17 @@
 # Env overrides: see common.sh.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
-TARGETS=${*:-stills preview ruler git compare timeline chunks md}
+TARGETS=${*:-stills preview ruler git compare timeline chunks md font}
 
 shoot() { # <mode> <out.png>
     launch "$1"
     screencapture -x -l"$WID" "$DEMO/raw.png"
     "$PY" "$HERE/compose.py" still "$DEMO/raw.png" "$2"
+}
+
+capture() { # <mode> <out.png>  raw window shot, for compose.py stack
+    launch "$1"
+    screencapture -x -l"$WID" "$2"
 }
 
 record() { # <scene>
@@ -64,6 +71,30 @@ for target in $TARGETS; do
             shoot diff "$REPO/images/theme-dracula.png"
             settings "Default Light Modern" Light
             shoot diff "$REPO/images/theme-light.png"
+            settings "Solarized Light" "Follow VS Code"
+            capture diff "$DEMO/theme-solarized.png"
+            settings "Monokai" "Follow VS Code"
+            capture diff "$DEMO/theme-monokai.png"
+            settings "Tomorrow Night Blue" "Follow VS Code"
+            capture diff "$DEMO/theme-blue.png"
+            "$PY" "$HERE/compose.py" stack "$REPO/images/theme-vscode.png" \
+                "$DEMO/theme-solarized.png" "$DEMO/theme-monokai.png" "$DEMO/theme-blue.png"
+            settings "Default Dark Modern" Dark
+            ;;
+        font)
+            # Editor font differs from the presets, so Follow VS Code is visible. Restored after.
+            settings "Default Dark Modern" Dark
+            "$PY" - "$DEMO/user/User/settings.json" << 'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d["editor.fontFamily"] = "Georgia"
+d["editor.fontSize"] = 18
+d["editor.fontWeight"] = "600"
+d["editor.lineHeight"] = 28
+json.dump(d, open(p, "w"), indent=2)
+PY
+            record font
             settings "Default Dark Modern" Dark
             ;;
         preview | ruler | git | compare | timeline | chunks | md) record "$target" ;;

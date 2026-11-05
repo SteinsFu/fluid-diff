@@ -111,15 +111,23 @@ Multi-file diffs, such as a whole commit opened from the Source Control Graph, a
 
 | Where | How |
 | --- | --- |
-| Command Palette | `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P`, then **Fluid Diff: Git** |
+| Command Palette | `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P`, then a command from the table below |
 | Editor title bar | Click **Fluid Diff: Git** while a text editor has focus |
-| Keyboard shortcut | Bind a key to `fluid-diff.fluidDiffGit` |
+| Keyboard shortcut | Bind a key to a command id from the table below |
 | Explorer, one file | Right-click a file and click **Fluid Diff: Git** |
-| Explorer, two files | Select exactly two files, right-click, and click **Fluid Diff: Compare Selected** (`fluid-diff.fluidDiffSelected`) |
-| Diff editor title bar | Click **Fluid Diff: From Diff Editor** (`fluid-diff.fromDiffEditor`) while a single-file diff is active |
+| Explorer, two files | Select exactly two files, right-click, and click **Fluid Diff: Compare Selected** |
+| Diff editor title bar | Click **Fluid Diff: From Diff Editor** while a single-file diff is active |
+
+| Command | Id | What it does |
+| --- | --- | --- |
+| **Fluid Diff: Git** | `fluid-diff.fluidDiffGit` | Compares the open file with its `HEAD` version. Unsaved edits are included. |
+| **Fluid Diff: Compare Selected** | `fluid-diff.fluidDiffSelected` | Compares the two files selected in the Explorer. |
+| **Fluid Diff: From Diff Editor** | `fluid-diff.fromDiffEditor` | Reopens the active single-file diff. |
+| **Fluid Diff: Select Theme** | `fluid-diff.selectTheme` | Sets the theme: Auto, Light, Dark, Dracula, or Follow VS Code. |
+| **Fluid Diff: Select Font** | `fluid-diff.selectFont` | Sets the font: Small, Medium, Large, or Follow VS Code. |
 
 <p align="center">
-  <img src="images/command.png" alt="Fluid Diff: Git in the VS Code Command Palette" width="820">
+  <img src="images/command.png" alt="Fluid Diff commands in the VS Code Command Palette" width="820">
 </p>
 
 ## 3. Markdown preview
@@ -133,7 +141,7 @@ When both files are Markdown, a **Preview** button sits between the two paths. C
 <p align="center">
   <img src="images/demo-md.gif" alt="Raw Markdown diff, then Preview renders the prose and math on both sides" width="820">
   <br>
-  <em>Click Preview to render the Markdown, including the changed equation.</em>
+  <em>Click Preview, then scroll. Lists, a table, a figure, code, and the changed equation stay highlighted.</em>
 </p>
 
 ## 4. Themes
@@ -148,9 +156,13 @@ Run **Fluid Diff: Select Theme** from the Command Palette, or set `fluid-diff.th
 | `Dracula` | Dracula palette, with comments brightened for readability |
 | `Follow VS Code` | UI colors and syntax colors from the applied VS Code theme |
 
-| Light | Dark | Dracula |
-| --- | --- | --- |
-| <img src="images/theme-light.png" alt="Fluid Diff Light theme"> | <img src="images/theme-dark.png" alt="Fluid Diff Dark theme"> | <img src="images/theme-dracula.png" alt="Fluid Diff Dracula theme"> |
+| Light | Dark |
+| --- | --- |
+| <img src="images/theme-light.png" alt="Fluid Diff Light theme"> | <img src="images/theme-dark.png" alt="Fluid Diff Dark theme"> |
+| Dracula | Follow VS Code |
+| <img src="images/theme-dracula.png" alt="Fluid Diff Dracula theme"> | <img src="images/theme-vscode.png" alt="Fluid Diff following Tomorrow Night Blue, with Monokai and Solarized Light behind"> |
+
+Follow VS Code uses the applied VS Code theme. Tomorrow Night Blue is in front. Monokai and Solarized Light sit behind it.
 
 ## 5. Font
 
@@ -162,6 +174,12 @@ Run **Fluid Diff: Select Font** from the Command Palette, or set `fluid-diff.fon
 | `Medium` (default) | 13px monospace, 20px line |
 | `Large` | 16px monospace, 24px line |
 | `Follow VS Code` | Editor font, size, weight, and line height |
+
+<p align="center">
+  <img src="images/demo-font.gif" alt="Open the Command Palette, run Fluid Diff: Select Font, then switch to Large, Small, and Follow VS Code" width="820">
+  <br>
+  <em>Select Font, then switch to Large, Small, and Follow VS Code. Follow VS Code uses the editor font.</em>
+</p>
 
 An open panel updates when either setting, the VS Code color theme, or the editor font changes.
 
@@ -230,4 +248,4 @@ npm test          # compile, lint, then run tests
 
 Press `F5` in VS Code to start an Extension Development Host with Fluid Diff loaded.
 
-To refresh the README images after a UI change, run `scripts/demo/make-images.sh` on macOS, or pass `stills`, `git`, `chunks`, `compare`, `timeline`, or `md` to redo only some of them. See [`scripts/demo/README.md`](scripts/demo/README.md) for requirements. The GIF click positions live in `scripts/demo/scenes/`.
+To refresh the README images after a UI change, run `scripts/demo/make-images.sh` on macOS, or pass `stills`, `git`, `chunks`, `compare`, `timeline`, `md`, or `font` to redo only some of them. See [`scripts/demo/README.md`](scripts/demo/README.md) for requirements. The GIF click positions live in `scripts/demo/scenes/`.
